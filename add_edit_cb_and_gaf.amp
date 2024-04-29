@@ -1,3 +1,4 @@
+<div>Test</div>
 %%[ 
 SET @cookie = QueryParameter('c')
 SET @environmentAppCentre = QueryParameter('sys_env')
