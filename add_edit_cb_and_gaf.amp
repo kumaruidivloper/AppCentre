@@ -1,0 +1,759 @@
+%%[ 
+SET @cookie = QueryParameter('c')
+SET @environmentAppCentre = QueryParameter('sys_env')
+SET @app_LastLoginDate = Lookup('ent.Users','LastLoginDate','SessionID',@cookie)
+SET @app_LastLoginDate = IIF(EMPTY(@app_LastLoginDate),'1900-01-01',@app_LastLoginDate)
+SET @appEventID = GUID()
+SET @localTime = SystemdateToLocalDate(NOW())
+SET @stateDE = 'ent.AppC_Notifications'
+SET @formRowCount = RowCount(BuildRowSetFromString(@formName,'//'))
+IF @formRowCount > 0 AND NOT EMPTY(@formName) THEN
+  SET @fn_rows = BuildRowSetFromString(@formName,'//')
+  for @f_pairs = 1 to @formRowCount do
+    SET @fn_row = Field(Row(@fn_rows,@f_pairs),1)
+    IF RowCount(BuildRowSetFromString(@fn_row,':')) > 1 THEN
+      SET @f_field = Field(Row(BuildRowSetFromString(@fn_row,':'),1),1)
+      SET @f_value =  Field(Row(BuildRowSetFromString(@fn_row,':'),2),1)
+      TreatAsContent(CONCAT('%','%[ SET @fn_',@f_field,' = "',@f_value,'" ]%','%'))
+    ENDIF
+  next @f_pairs
+ENDIF
+SET @sourceIdValue = @fn_Value
+IF RowCount(LookupRows('ent.Users','SessionID',@cookie)) > 0 AND FormatDate(@app_LastLoginDate,"DD-MM-YYYY") == FormatDate(@localTime, "DD-MM-YYYY") THEN
+  SET @app = Lookup('ent.Users','app','SessionID',@cookie)
+  SET @ParentApp = Lookup('ent.appC_parent_apps','Name','Id',Lookup('ent.appC_applications','parent_Id','Name',@app))
+  SET @AppObject = Lookup('ent.appC_applications','Name','Name',@app)
+  SET @username = Lookup('ent.Users','Username','SessionID',@cookie)
+  SET @emailAddress = Lookup('ent.Users','EmailAddress','Username',@username)
+  SET @secret = Lookup('ent.Users','Secret','Username',@username)
+  SET @role = Lookup('ent.Users','UserRole','SessionID',@cookie)
+  SET @userBrand = Lookup('ent.Users','Brand','SessionID',@cookie)
+  SET @userCurrentBrand = IIF(EMPTY(Lookup('ent.Users','CurrentBrand','SessionID',@cookie)),@userBrand,Lookup('ent.Users','CurrentBrand','SessionID',@cookie))
+  SET @preview_mode = Lookup('ent.Users','preview_mode','SessionID',@cookie)
+  SET @preview_section = Lookup('ent.Users','preview_section','SessionID',@cookie)
+  SET @sourceIdField = Lookup('ent.appC_applications','sourceIdField','Name',@app)
+  SET @AppStateEnvironment = IIF(EMPTY(Lookup('ent.Users','Environment','EmailAddress',@EmailAddress)),'PROD',Lookup('ent.Users','Environment','EmailAddress',@EmailAddress))
+  SET @sourceTable = Lookup('ent.appC_applications',IIF(@AppStateEnvironment == 'UAT','sourceTable_UAT','sourceTable'),'Name',@app)
+  SET @AppCPermissionTable = IIF(@AppStateEnvironment == 'UAT','ent.AppC_AppPermissions_UAT','ent.AppC_AppPermissions')
+  SET @de_abi = IIF(@AppStateEnvironment == 'UAT','ent.All_Brand_Info_UAT','ent.All_Brand_Info')
+  SET @de_eca = IIF(@AppStateEnvironment == 'UAT','ent.email_contentBlock_areas_UAT','ent.email_contentBlock_areas')
+  SET @de_emailObject = IIF(@AppStateEnvironment == 'UAT','ent.EmailObject_UAT','ent.EmailObject')
+  SET @de_ani = IIF(@AppStateEnvironment == 'UAT','ent.All_Newsletter_Info_UAT','ent.All_Newsletter_Info')
+  SET @de_dec = IIF(@AppStateEnvironment == 'UAT','ent.UAT_default_emailComponents','ent.default_emailComponents')
+  SET @de_cec = IIF(@AppStateEnvironment == 'UAT','ent.custom_emailComponents_UAT','ent.custom_emailComponents')
+  SET @de_dtc = IIF(@AppStateEnvironment == 'UAT','ent.default_templateComponents_UAT','ent.default_templateComponents')
+  SET @de_appC_cc = IIF(@environmentAppCentre == 'UAT','ent.AppC_components_code',IIF(@environmentAppCentre == 'SIT','AppC_components_SIT_code','ent.AppC_components_code'))
+  SET @sysFieldsDe = IIF(@AppStateEnvironment == 'UAT','ent.system_field__obj_UAT','ent.system_field__obj')
+  SET @customDropdown_obj = IIF(@AppStateEnvironment == 'UAT','ent.customDropdown__obj_UAT','ent.customDropdown__obj')
+  SET @de_ecc = IIF(@AppStateEnvironment == 'UAT','ent.email_content_cache_UAT','ent.email_content_cache')
+  SET @de_eca_backup = Concat(@de_eca,'_backup')
+  SET @de_ecc_backup = Concat(@de_ecc,'_backup')
+  SET @de_cec_backup = Concat(@de_cec,'_backup')
+  SET @make_backup = RequestParameter('make_backup')
+  SET @create_or_update_backup = RequestParameter('create_or_update_backup')
+  SET @backup_id = RequestParameter('backup_id')
+  SET @de_cec_res = IIF(@make_backup == 1,@de_cec_backup,@de_cec)
+  SET @new_backup_id = GUID()
+  IF NOT EMPTY(Lookup(@StateDE,'EventID','Username',@Username,'SessionID',@cookie,'Object',@AppObject)) THEN
+    SET @AppStateID = Field(Row(LookupOrderedRows(@StateDE,0,'DateAdded DESC','Username',@Username,'SessionID',@cookie,'Object',@AppObject),1),'EventID')
+    SET @ShowInactive = Lookup(@StateDE,'ShowInactive','EventID',@AppStateID)
+    SET @CurrentAppSection = IIF(EMPTY(Lookup(@StateDE,'Section','EventID',@AppStateID)),1,Lookup(@StateDE,'Section','EventID',@AppStateID))
+    SET @CurrentAppSectionName = Lookup(@StateDE,'SectionName','EventID',@AppStateID)
+    SET @sourceSubObjTableValue = Lookup(@StateDE,'SubObject','EventID',@AppStateID)
+    SET @sourceObject = Lookup(@StateDE,'Object','EventID',@AppStateID)
+    SET @sourceIdSubjValue = Lookup(@StateDE,'SubObjValue','EventID',@AppStateID)
+    SET @fn_Value = Lookup(@StateDE,'Value','EventID',@AppStateID)
+    SET @CurrentFields_state = Lookup(@StateDE,'fields_state','EventID',@AppStateID)
+  ELSE
+    SET @AppStateID = TreatAsContent(GUID())
+    SET @ShowInactive = 0
+  ENDIF
+  SET @AppCPermissionTable = IIF(@AppStateEnvironment == 'UAT','ent.AppC_AppPermissions_UAT','ent.AppC_AppPermissions')
+  IF Lookup(@appCPermissionTable,'Access','EmailAddress',@emailAddress,'ParentApp',@parentApp,'Type',@fn_Action) != true THEN
+    SET @formMessage = Concat("You don't have permission to ",LowerCase(@fn_Action)," in this app or environment. To get your permissions updated, please raise a <a href='https://sofi.newscorp.com/esc?id=sc_cat_item&table=sc_cat_item&sys_id=ae90bf888724a510d82afcc6cebb35d9' target='_blank'>SOFI access request ticket</a>.")
+    SET @do_not_action = 1
+    SET @formStatus = 'warning'
+  ENDIF
+  IF @do_not_action != 1 THEN
+    SET @action_area = RequestParameter('action_area')
+    SET @cb_EventID = GUID()
+    SET @cb_pos = RequestParameter('cbPos')
+    SET @src_secret = RequestParameter('secret')
+    IF @action_area == 'reference_from_other_email' THEN
+      SET @de_appC_cc_Name = Lookup(@de_eca,'ContentBlock','EventID',@to_use_postData_cb_id)
+      SET @de_eca_friendly_name = Lookup(@de_eca,'friendly_name','EventID',@to_use_postData_cb_id)
+      SET @de_appC_cc_FriendlyName = Lookup(@de_appC_cc,'friendlyName','Name',@de_appC_cc_Name)
+      SET @edit_eca_PositionInEmail = @cb_pos
+      SET @new_eca_EventID = GUID()
+      SET @fn_Object = 'Email Editor'
+      SET @fn_SubObject = 'Content block settings'
+      SET @fn_Action = 'Edit'
+      SET @fn_Displayed = 0
+      SET @fn_SubObjValue = @new_eca_EventID
+      for @var = 1 to RowCount(LookupRows(@sysFieldsDe,'Template','none','component','email_content_areas','Active','1','default_group','0')) do
+        SET @sys_eca_rows = LookupRows(@sysFieldsDe,'Template','none','component','email_content_areas','Active','1','default_group','0') 
+        SET @deField = Field(Row(@sys_eca_rows,@var),'field_name') 
+        SET @deData_type = Field(Row(@sys_eca_rows,@var),'data_type') 
+        IF @deField != 'EventID' AND @deField != 'PositionInEmail' THEN 
+          SET @deValue = Lookup(@de_eca,@deField,'EventID',@to_use_postData_cb_id)
+          TreatAsContent(CONCAT('%','%[ SET @edit_eca_',@deField,' = "',@deValue,'" ]%','%'))
+        ENDIF
+      next @var
+      SET @edit_eca_use_ref_cb_hide = RequestParameter('use_ref_cb_hide')
+      SET @f_name = Concat(@de_appC_cc_FriendlyName,IIF(NOT EMPTY(@de_eca_friendly_name),Concat(' | ',@de_eca_friendly_name),''))
+      SET @FormMessage = Concat('Successfully <strong>referenced</strong> content block <strong>',@f_name,'</strong> from the email <strong>',Lookup(@de_eca,'EmailName','EventID',@to_use_postData_cb_id),'</strong> into the email <strong>',@sourceIdValue,'</strong>.')
+      SET @CVBRowCount = RowCount(LookupRows(@de_eca,'EmailName',@sourceIdValue))
+      IF @edit_eca_PositionInEmail < Add(@CVBRowCount,1) THEN 
+        SET @posCounter = Add(@edit_eca_PositionInEmail,1) 
+        for @posChange = @edit_eca_PositionInEmail to @CVBRowCount do 
+          SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID') 
+          IF @posChange <= Add(@CVBRowCount,1) THEN 
+            UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@posCounter,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+          ENDIF 
+          SET @posCounter = Add(@posCounter,1)
+        next @posChange 
+      ENDIF 
+      InsertData(@de_eca,'PositionInEmail',@edit_eca_PositionInEmail,'ContentBlock',@edit_eca_ContentBlock,'EmailName',@sourceIdValue,'EventID',@new_eca_EventID,'default_template_settings',@edit_eca_default_template_settings,'UpdatedDate',@LocalTime,'UpdatedBy',@Username,'CreatedBy',@userName,'CreatedDate',@localTime,'friendly_name',@edit_eca_friendly_name,'marketing',@edit_eca_marketing,'hide_from_prem_subs',@edit_eca_hide_from_prem_subs,'hide_before_date',@edit_eca_hide_before_date,'hide_after_date',@edit_eca_hide_after_date,'hide_set_of_days',@edit_eca_hide_set_of_days,'ref_cb_id',@to_use_postData_cb_id,'use_ref_cb_hide',@edit_eca_use_ref_cb_hide,'use_hide_after_date',@edit_eca_use_hide_after_date,'use_hide_before_date',@edit_eca_use_hide_before_date)
+      UpdateData(@sourceTable,1,'EmailName',@sourceIdValue,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+      IF @preview_mode == 'focused' THEN 
+        UpdateData('ent.Users',1,'Username',@userName,'preview_section',@new_eca_EventID) 
+      ENDIF
+    ELSEIF @action_area != 'reference_from_other_email' THEN
+      ]%%%%{={{ }}=}%%{{.datasource data type=variable source=@postData }}{{.data}}{ "target" : "@postData" }{{/data}}%%[
+      IF @action_area != 'duplicate' AND @action_area != 'duplicate_from_other_email' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+        SET @action_area = TreatAscontent('%%{={{ }}=}%%{{data.action_area}}')
+        SET @de_eca_PositionInEmail = TreatAscontent('%%{={{ }}=}%%{{data.de_eca_PositionInEmail}}')
+        SET @edit_eca_EventID = TreatAscontent('%%{={{ }}=}%%{{data.de_eca_EventID}}')
+      ENDIF
+      SET @edit_eca_ContentBlock = TreatAscontent('%%{={{ }}=}%%{{data.edit_eca_ContentBlock}}') 
+      SET @de_appC_cc_Name = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.de_appC_cc_Name}}')) 
+      SET @de_appC_cc_FriendlyName = Lookup(@de_appC_cc,'friendlyName','Name',@de_appC_cc_Name)
+      SET @custom_block = TreatAscontent('%%{={{ }}=}%%{{data.custom_block}}')
+      IF @action_area == 'duplicate' OR @action_area == 'duplicate_from_other_email' THEN
+        SET @edit_eca_EventID = @to_use_postData_cb_id
+        SET @fn_Object = 'Email Editor'
+        SET @fn_SubObject = 'Content block settings'
+        SET @fn_Action = 'Edit'
+        SET @fn_Displayed = 0
+        SET @fn_SubObjValue = @cb_EventID
+        SET @formPost_data = Replace(@formPost_data,@edit_eca_EventID,@cb_EventID)
+        IF @action_area != 'duplicate_from_other_email' THEN
+          SET @edit_eca_PositionInEmail = Lookup(@de_eca,'PositionInEmail','EventID',@edit_eca_EventID)
+          SET @fn_Value = Lookup(@de_eca,'EmailName','EventID',@edit_eca_EventID)
+          SET @sourceIdValue = @fn_Value 
+        ELSE
+          SET @fn_Value = @sourceIdValue
+          SET @edit_eca_PositionInEmail = @cb_pos
+        ENDIF
+      ELSEIF @action_area == 'decouple' OR @action_area == 'backup' THEN
+        SET @edit_eca_EventID = @to_use_postData_cb_id
+        SET @fn_Object = 'Email Editor'
+        SET @fn_SubObject = 'Content block settings'
+        SET @fn_Action = 'Edit'
+        IF @action_area != 'backup' THEN
+          SET @fn_Displayed = 1
+          SET @fn_SubObjValue = @form_cb_id
+          SET @formPost_data = Replace(@formPost_data,@edit_eca_EventID,@form_cb_id)
+          SET @edit_eca_PositionInEmail = Lookup(@de_eca,'PositionInEmail','EventID',@form_cb_id)
+        ELSE
+          SET @fn_Displayed = 0
+          SET @fn_SubObjValue = @to_use_postData_cb_id
+          SET @edit_eca_PositionInEmail = Lookup(@de_eca,'PositionInEmail','EventID',@to_use_postData_cb_id)
+        ENDIF
+      ENDIF
+      IF @action_area == 'add' THEN
+        SET @de_appC_cc_EventID = Lookup(@de_appC_cc,'EventID','Name',@de_appC_cc_Name)
+        SET @formPost_data = Replace(@formPost_data,@de_appC_cc_EventID,@cb_EventID) 
+      ENDIF 
+      SET @CVBRowCount = RowCount(LookupRows(@de_eca,'EmailName',@fn_Value))
+      SET @de_e_Brand = Lookup(@sourceTable,'Brand',@sourceIdField,@fn_Value) 
+      SET @de_e_default_template_settings = Lookup(@sourceTable,'default_template_settings','EmailName',@fn_Value) 
+      SET @de_e_email_template = Lookup(@sourceTable,'email_template','EmailName',@fn_Value) 
+      SET @de_abi_email_template = Lookup(@de_abi,'email_template','Brand',@de_e_Brand)
+      SET @de_e_email_template = IIF(EMPTY(@de_e_email_template),@de_abi_email_template,@de_e_email_template) 
+      IF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN 
+        SET @new_eca_EventID = @cb_EventID SET @fn_SubObjValue = @cb_EventID 
+      ELSEIF @action_area == 'edit' OR @action_area == 'backup' THEN  
+        SET @fn_SubObjValue = @edit_eca_EventID 
+      ENDIF 
+      IF @custom_block == '1' THEN 
+        SET @de_appC_cc_Name = 'customBlockByKey' 
+        IF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN 
+          SET @fn_SubObjValue = @new_eca_EventID 
+        ENDIF
+        IF @action_area == 'duplicate' OR @action_area == 'duplicate_from_other_email' THEN
+          SET @edit_eca_ContentBlock = TreatAscontent('%%{={{ }}=}%%{{data.edit_eca_ContentBlock}}')
+        ELSE 
+          SET @edit_eca_ContentBlock = Trim(TreatAscontent(Concat('%%{={{ }}=}%%{{data.NewContentBlockKeyCustom',@edit_eca_EventID,'}}')))
+        ENDIF 
+      ELSEIF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') THEN 
+        SET @de_appC_cc_Name = @edit_eca_ContentBlock 
+      ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN 
+        SET @de_appC_cc_Name = TreatAscontent('%%{={{ }}=}%%{{data.de_appC_cc_Name}}') 
+      ENDIF
+      SET @ref_cb = IIF(EMPTY(Lookup(@de_eca,'ref_cb_id','EventID',@edit_eca_EventID)),0,1)
+      SET @edit_contentBlock_NewDinkus = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.NewDinkus',@edit_eca_EventID,'}}'))
+      SET @edit_contentBlock_dinkus = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.dinkus',@edit_eca_EventID,'}}'))
+      SET @edit_contentBlock_dinkus_option = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','dinkus_option',@edit_eca_EventID,'}}'))
+      SET @edit_contentBlock_MaxArticles = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','MaxArticles',@edit_eca_EventID,'}}'))
+      SET @result_CB_ID = IIF(@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup',@new_eca_EventID,IIF(@action_area == 'decouple',@form_cb_id,@edit_eca_EventID)) 
+      IF @action_area == 'duplicate' OR @action_area == 'duplicate_from_other_email' OR @action_area == 'decouple' OR @action_area == 'backup' OR @action_area == 'add' THEN 
+         SET @block_section = 1
+        SET @dinkus_section = 1
+      ELSE 
+        SET @block_section = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.block_section}}'))
+        SET @dinkus_section = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.dinkus_section}}'))
+      ENDIF
+      IF @ref_cb != 1 OR @action_area == 'decouple' THEN 
+        IF @de_appC_cc_Name == 'curated_collection' OR @de_appC_cc_Name == 'video_collection' THEN
+          SET @new_coll_id_req = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.NewColId',@edit_eca_EventID,'}}'))) 
+          SET @edit_contentBlock_CollectionID = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.CollectionID',@edit_eca_EventID,'}}'))) 
+          SET @add_new_coll_id = IIF(EMPTY(@new_coll_id_req) OR @edit_contentBlock_CollectionID != 'New',0,1) 
+          SET @new_cb_CollectionID = IIF(@add_new_coll_id == 0,@edit_contentBlock_CollectionID,@new_coll_id_req) 
+          SET @get_col_data_on_save = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.get_col_data_on_save',@edit_eca_EventID,'}}'))
+          IF @get_col_data_on_save == true THEN
+            ]%%<script runat=server>
+              Platform.Load("Core","1");
+              var cur_coll_api_url = 'https://cloud.e.newsdigitalmedia.com.au/appC_cur_coll_API';
+              var edit_contentBlock_CollectionID =  Platform.Variable.GetValue("@new_cb_CollectionID");
+              var authKey_SFMC = Platform.Function.Lookup('API_Keys','Key',['Id','Active'], ['CAPI_Feed_CollectID_API','True']);
+              var json_request_payload = '{"messageId":"a02d5281572cbcd431d0c3b15f062a94","percolateId":"00e17c38e9d71071f9434eb169f642d9","capiId":"'+edit_contentBlock_CollectionID+'","capiUri":"https://client.api.news/articles/cb0e1ce5b176dbc80948e9cdadb26545","type":"article","revision":{"major":1665026275000,"minor":0},"status":"active","draft":false,"platform":{"id":"e19e617a-450b-11ed-8453-dc3ada2e100d","instance":"meth01","system":"methode","documentId":"7415b3b4-ae49-428d-a5ec-693bebfbcaaf","parentId":"e19e617a-450b-11ed-8453-dc3ada2e100d","userCreated":"cartwrightl","userUpdated":"palmadab","systemUpdated":"methode","capiOrigin":"AU"},"date":{"live":"2022-10-06T00:27:00.000Z","updated":"2022-10-06T03:17:55.000Z","custom":"2022-10-06T03:17:00.000Z","created":"2022-10-06T00:14:45.000Z","processed":"2022-10-06T03:18:45.181Z"},"locale":"en_AU","accessType":"free","action":"POST","transactionId":"141936_e19e617a-450b-11ed-8453-dc3ada2e100d","isSyncToV2":true,"capiVersion":"v3"}';
+              try {
+                var req = new Script.Util.HttpRequest(cur_coll_api_url);
+                req.emptyContentHandling = 0;
+                req.retries = 2;
+                req.continueOnError = true;
+                req.setHeader("x-auth-nca",authKey_SFMC);
+                req.method = "POST";
+                req.postData = json_request_payload;
+                var resp = req.send();
+                var result = Platform.Function.Stringify(resp.content);
+                if (result.length > 192) {
+                  try {
+                    var req = new Script.Util.HttpRequest(cur_coll_api_url);
+                    req.emptyContentHandling = 0;
+                    req.retries = 2;
+                    req.continueOnError = true;
+                    req.setHeader("x-auth-nca",authKey_SFMC);
+                    req.method = "POST";
+                    req.postData = json_request_payload;
+                    var resp = req.send();
+                    var result = Platform.Function.Stringify(resp.content);
+                    if (result.length > 192) {
+                      Platform.Variable.SetValue("@formStatus",0); 
+                      Platform.Variable.SetValue("@formMessage","The provided collection ID is not recognised as valid. Please make sure the collection ID '"+edit_contentBlock_CollectionID+"' is valid and published in WordPress before trying to save again."); 
+                      var sourceSubObjTableValue = Platform.Variable.GetValue("@sourceSubObjTableValue"); 
+                      Platform.Variable.SetValue("@fn_SubObject",sourceSubObjTableValue);
+                      Platform.Variable.SetValue("@message_color",'danger');
+                    }
+                  } catch (e) {
+                      Platform.Variable.SetValue("@formStatus",0); 
+                      Platform.Variable.SetValue("@formMessage","API request error."); 
+                      var sourceSubObjTableValue = Platform.Variable.GetValue("@sourceSubObjTableValue"); 
+                      Platform.Variable.SetValue("@fn_SubObject",sourceSubObjTableValue);
+                      Platform.Variable.SetValue("@message_color",'danger');
+                  }
+                }
+              } catch (e) {
+                Platform.Variable.SetValue("@formStatus",0); 
+                Platform.Variable.SetValue("@formMessage","API request error."); 
+                Platform.Variable.SetValue("@fn_target_field",Platform.Function.Stringify(e)); 
+                var sourceSubObjTableValue = Platform.Variable.GetValue("@sourceSubObjTableValue"); 
+                Platform.Variable.SetValue("@fn_SubObject",sourceSubObjTableValue);
+                Platform.Variable.SetValue("@message_color",'danger');
+              }
+            </script>%%[
+          ENDIF 
+          IF EMPTY(@new_cb_CollectionID) OR @new_cb_CollectionID == 'New' THEN SET @formStatus = 0 SET @FormMessage = 'Please select a collection ID.' SET @message_color = 'warning' ENDIF 
+        ELSEIF @de_appC_cc_Name == 'customBlockByKey' THEN 
+          ]%%<script runat=server>try{</script>%%[ SET @check_custom_block = ContentBlockByKey(@edit_eca_ContentBlock) ]%%<script runat=server>} catch (e){ var edit_eca_ContentBlock = Platform.Variable.GetValue("@edit_eca_ContentBlock"); var emailText = '<br><br>The custom content block ' + edit_eca_ContentBlock + ' could not be found. Please make sure you have shared it with the parent business unit.<br><br>';Platform.Variable.SetValue("@formStatus", 0);Platform.Variable.SetValue("@formMessage", 'The custom block ' + edit_eca_ContentBlock + ' could not be found. Please make sure you have shared it with the parent business unit.');Platform.Variable.SetValue("@message_color",'warning');}</script>%%[  
+        ELSEIF @de_appC_cc_Name == 'free_text_block' AND @edit_contentBlock_dinkus_option == 'SFMC dinkus' AND (@edit_contentBlock_dinkus != 'No dinkus' AND NOT EMPTY(@edit_contentBlock_NewDinkus)) OR (NOT EMPTY(@edit_contentBlock_NewDinkus) AND @edit_contentBlock_dinkus == 'New') THEN 
+          SET @edit_contentBlock_dinkus = IIF(@edit_contentBlock_dinkus == 'New',@edit_contentBlock_NewDinkus,@edit_contentBlock_dinkus)
+          SET @CCBSecret = IIF(@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup',@cb_EventID,IIF(@action_area == 'decouple',@form_cb_id,@edit_eca_EventID)) 
+          ]%%<script runat=server>try{</script>%%[ SET @check_custom_block = ContentBlockByKey(@edit_contentBlock_dinkus) ]%%<script runat=server> } catch (e) {var edit_contentBlock_dinkus = Platform.Variable.GetValue("@edit_contentBlock_dinkus");var emailText = '<br><br>The custom dinkus block ' + edit_contentBlock_dinkus + ' could not be found. Please make sure you have shared it with the parent business unit.<br><br>';Platform.Variable.SetValue("@formStatus", 0);Platform.Variable.SetValue("@message_color", "warning");Platform.Variable.SetValue("@formMessage", 'The custom dinkus block ' + edit_contentBlock_dinkus + ' could not be found. Please make sure you have shared it with the parent business unit.');}</script>%%[
+        ENDIF
+        IF @de_appC_cc_Name == 'free_text_block' THEN 
+          SET @free_text_char_count_check = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.freeText_content','}}'))
+          SET @len_free_text_block = Length(@free_text_char_count_check)
+          IF @len_free_text_block > 499999 THEN 
+            SET @formStatus = 0
+            SET @formMessage = 'The content block could not be saved because the content exceeds the 500k character limit. This is usually caused by a base64 image file that has been pasted into the editor. Instead of pasting the image, please upload the image via the editor or provide an image url link and resave the block in order to resolve the error.'
+            SET @message_color = 'danger'
+          ENDIF 
+        ENDIF
+      ENDIF 
+      IF @formStatus != 0 THEN
+        IF @ref_cb != 1 OR @action_area == 'decouple' THEN
+          IF @de_e_default_template_settings != true THEN
+            SET @edit_emailTemplate_template_width = Lookup(@de_cec,'Value','Template','none','Active','1','Component','emailTemplate','EmailName',@sourceIdValue,'Name','template_width') 
+            SET @edit_emailTemplate_inner_template_BGC = Lookup(@de_cec,'Value','Template','none','Active','1','Component','emailTemplate','EmailName',@sourceIdValue,'Name','inner_template_BGC') 
+            SET @edit_emailTemplate_email_BGC = Lookup(@de_cec,'Value','Template','none','Active','1','Component','emailTemplate','EmailName',@sourceIdValue,'Name','email_BGC')
+          ELSE
+            SET @edit_emailTemplate_template_width = Lookup(@de_dtc,'Value','Template','none','email_template',@de_e_email_template,'Active','1','Component','emailTemplate','Name','template_width') 
+            SET @edit_emailTemplate_inner_template_BGC = Lookup(@de_dtc,'Value','Template','none','email_template',@de_e_email_template,'Active','1','Component','emailTemplate','Name','inner_template_BGC') 
+            SET @edit_emailTemplate_email_BGC = Lookup(@de_dtc,'Value','Template','none','email_template',@de_e_email_template,'Active','1','Component','emailTemplate','Name','email_BGC')
+          ENDIF 
+        ENDIF
+        IF @role != 'Editor' AND @role != 'editorPlus' AND @action_area != 'backup' THEN
+          SET @edit_eca_default_template_settings = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.default_template_settings}}'))
+          IF  @action_area != 'duplicate' AND @action_area != 'duplicate_from_other_email' THEN 
+            SET @edit_eca_PositionInEmail = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.PositionInEmail}}'))
+            SET @edit_eca_use_more_cts = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.use_more_cts}}'))
+          ENDIF 
+        ELSE
+          IF @action_area == 'backup' THEN 
+            SET @edit_eca_default_template_settings = Lookup(@de_eca_backup,'default_template_settings','EventID',@edit_eca_EventID,'backup_id',@backup_id)
+            SET @edit_eca_PositionInEmail = Lookup(@de_eca_backup,'PositionInEmail','EventID',@edit_eca_EventID,'backup_id',@backup_id)
+            SET @edit_eca_use_more_cts = Lookup(@de_eca_backup,'use_more_cts','EventID',@edit_eca_EventID,'backup_id',@backup_id)
+          ELSE
+            SET @edit_eca_default_template_settings = Lookup(@de_eca,'default_template_settings','EventID',@edit_eca_EventID)
+            IF @action_area != 'duplicate' AND @action_area != 'duplicate_from_other_email' THEN
+              SET @edit_eca_PositionInEmail = Lookup(@de_eca,'PositionInEmail','EventID',@edit_eca_EventID)
+              SET @edit_eca_use_more_cts = Lookup(@de_eca,'use_more_cts','EventID',@edit_eca_EventID)
+            ENDIF
+          ENDIF 
+        ENDIF 
+        IF @ref_cb != 1 OR @action_area == 'decouple' THEN
+          IF @Role != 'Editor' AND @de_appC_cc_Name != 'customBlockByKey' AND @formStatus != 0 THEN 
+            for @var = 1 to RowCount(LookupRows(@sysFieldsDe,'Template','all','Component','ContentBlock','default_group','1','Active','1')) do
+              SET @sys_cb_all_rows = LookupRows(@sysFieldsDe,'Template','all','Component','ContentBlock','default_group','1','Active','1') 
+              SET @deField = Field(Row(@sys_cb_all_rows,@var),'field_name') 
+              SET @dedata_type = Field(Row(@sys_cb_all_rows,@var),'data_type')
+              IF @make_backup == 1 THEN
+                SET @current_value = Lookup(@de_cec_res,'Value','EventID',@edit_eca_EventID,'Template',@edit_eca_ContentBlock,'Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue,'backup_id',@backup_id)
+              ELSE 
+                SET @current_value = Lookup(@de_cec_res,'Value','EventID',@edit_eca_EventID,'Template',@edit_eca_ContentBlock,'Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue)
+              ENDIF
+              IF @create_or_update_backup == 'Create' THEN SET @current_value = '' ENDIF 
+              SET @deValue = ''
+              IF @role == 'editorPlus' AND @edit_eca_default_template_settings != true AND @action_area != 'duplicate' AND @action_area != 'duplicate_from_other_email' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                SET @deValue = Lookup(@de_cec,'Value','EventID',@edit_eca_EventID,'Template','all','Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue)
+              ELSEIF @edit_eca_default_template_settings != true THEN 
+                SET @deValue = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.', @deField,@edit_eca_EventID,'}}'))
+                IF EMPTY(@deValue) AND @deData_type != 'boolean' THEN
+                  SET @deValue = Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField) 
+                ENDIF
+              ELSEIF RowCount(LookupRows(@de_dtc,'email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField)) > 0 THEN 
+                SET @deValue = Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField) 
+              ELSE 
+                SET @deValue = Lookup(@sysFieldsDe,'default_value','template','all','Component','contentBlock','field_name',@deField,'Active','1') 
+              ENDIF
+              IF NOT EMPTY(@deValue) OR @dedata_type == 'boolean' THEN 
+                TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%')) 
+                IF @role != 'editorPlus' THEN 
+                  IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND (@deValue != @current_value) THEN 
+                    UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template','all','Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID)
+                    IF @make_backup == 1 AND (@de_appC_cc_Name == 'curated_collection' OR @de_appC_cc_Name == 'recommended_collection' OR @de_appC_cc_Name == 'video_collection') THEN
+                      IF @create_or_update_backup == 'Update' THEN 
+                        UpsertData(@de_cec_backup,7,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template','all','backup_id',@backup_id,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID)
+                      ELSEIF @create_or_update_backup == 'Create' THEN
+                        InsertData(@de_cec_backup,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template','all','Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'backup_id',@new_backup_id)
+                      ENDIF
+                    ENDIF 
+                  ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                    InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template','all','Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'CreatedBy',@userName,'CreatedDate',@localTime) 
+                  ENDIF 
+                ENDIF 
+              ENDIF 
+              TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%'))
+            next @var
+          ENDIF
+          IF @de_appC_cc_Name == 'free_text_block' OR @de_appC_cc_Name == 'quote_block' AND @formStatus != 0 THEN
+            SET @deValue = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.freeText_content','}}'))
+            IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND @formStatus != 0 THEN 
+              UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','freeText','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID) 
+            ELSE 
+              InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','freeText','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'CreatedBy',@userName,'CreatedDate',@localTime) 
+            ENDIF 
+          ENDIF 
+          IF @de_appC_cc_Name != 'customBlockByKey' THEN 
+            for @var = 1 to RowCount(LookupRows(@sysFieldsDe,'Template',@edit_eca_ContentBlock,'component','contentBlock')) do
+              SET @sys_cb_t_rows = LookupRows(@sysFieldsDe,'Template',@edit_eca_ContentBlock,'component','contentBlock')
+              SET @sys_default_group = Field(Row(@sys_cb_t_rows,@var),'default_group') 
+              SET @deField = Field(Row(@sys_cb_t_rows,@var),'field_name') 
+              SET @dedata_type = Field(Row(@sys_cb_t_rows,@var),'data_type')
+              IF @make_backup == 1 THEN 
+                SET @current_value = Lookup(@de_cec_res,'Value','EventID',@edit_eca_EventID,'Template',@edit_eca_ContentBlock,'Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue,'backup_id',@backup_id)
+              ELSE 
+                SET @current_value = Lookup(@de_cec_res,'Value','EventID',@edit_eca_EventID,'Template',@edit_eca_ContentBlock,'Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue)
+              ENDIF
+              IF @create_or_update_backup == 'Create' THEN SET @current_value = '' ENDIF
+              SET @deValue = '' 
+              IF @sys_default_group == true AND @Role != 'Editor' THEN 
+                IF @role == 'editorPlus' AND @edit_eca_default_template_settings != true AND @action_area != 'duplicate' AND @action_area != 'duplicate_from_other_email' AND @action_area != 'decouple' AND @action_area != 'backup' THEN 
+                  SET @deValue = Lookup(@de_cec,'Value','EventID',@edit_eca_EventID,'Template',@edit_eca_ContentBlock,'Active','1','Name',@deField,'Component','contentBlock','EmailName',@sourceIdValue)
+                ELSEIF @edit_eca_default_template_settings != true THEN 
+                  SET @deValue = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.', @deField,@edit_eca_EventID,'}}'))
+                  IF EMPTY(@deValue) AND @deData_type != 'boolean' THEN
+                    SET @deValue = Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField)
+                  ENDIF
+                  IF EMPTY(@deValue) AND @deData_type != 'boolean' THEN
+                    SET @deValue = Lookup(@sysFieldsDe,'default_value','template',@edit_eca_ContentBlock,'Component','contentBlock','field_name',@deField,'Active','1')
+                  ENDIF
+                ELSEIF @edit_eca_default_template_settings == true THEN 
+                  IF RowCount(LookupRows(@de_dtc,'email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField)) > 0 THEN 
+                    SET @deValue = Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Component','contentBlock','Name',@deField) 
+                  ELSE 
+                    SET @deValue = Lookup(@sysFieldsDe,'default_value','field_name',@deField,'Template',@edit_eca_ContentBlock,'component','contentBlock','default_group','1') 
+                  ENDIF
+                ENDIF
+                IF indexOf(@deField,'_cts') > 1 AND NOT EMPTY(@edit_contentBlock_MaxArticles) THEN
+                  SET @deValue = ""
+                  IF @edit_eca_default_template_settings == true THEN
+                    for @cts_rows = 2 to @edit_contentBlock_MaxArticles do
+                      SET @deValue = Concat(@deValue,'@#$%^&',Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Active','1','Name',Replace(@deField,'_cts',''),'Component','contentBlock'))
+                    next @cts_rows
+                  ELSE
+                    for @cts_rows = 2 to @edit_contentBlock_MaxArticles do
+                      SET @deValue = Concat(@deValue,'@#$%^&',TreatAscontent(Concat('%%{={{ }}=}%%','{{data.',@deField,'_',@cts_rows,@edit_eca_EventID,'}}')))
+                    next @cts_rows
+                  ENDIF
+                  IF @dedata_type == 'boolean' AND EMPTY(Replace(@deValue,'@#$%^&','')) THEN
+                    for @cts_rows = 2 to @edit_contentBlock_MaxArticles do
+                      SET @deValue = Concat(@deValue,'@#$%^&',0)
+                    next @cts_rows
+                  ENDIF
+                  IF EMPTY(Replace(@deValue,'@#$%^&','')) THEN
+                    SET @deValue = ""
+                    for @cts_rows = 2 to @edit_contentBlock_MaxArticles do
+                      IF NOT EMPTY(Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Active','1','Name',Replace(@deField,'_cts',''),'Component','contentBlock')) THEN
+                        SET @deValue = Concat(@deValue,'@#$%^&',Lookup(@de_dtc,'Value','email_template',@de_e_email_template,'Template',@edit_eca_ContentBlock,'Active','1','Name',Replace(@deField,'_cts',''),'Component','contentBlock'))
+                      ELSE
+                        SET @deValue = Concat(@deValue,'@#$%^&',Lookup(@sysFieldsDe,'default_value','template',@edit_eca_ContentBlock,'Active','1','field_name',Replace(@deField,'_cts',''),'Component','contentBlock'))
+                      ENDIF
+                    next @cts_rows
+                  ENDIF 
+                ENDIF
+                IF NOT EMPTY(@deValue) OR @dedata_type == 'boolean' THEN 
+                  TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%'))
+                  IF @role != 'editorPlus' THEN
+                    IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND (@deValue != @current_value OR @action_area == 'decouple') THEN
+                      UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID)
+                      IF @make_backup == 1 AND (@de_appC_cc_Name == 'curated_collection' OR @de_appC_cc_Name == 'recommended_collection' OR @de_appC_cc_Name == 'video_collection') THEN
+                        IF @create_or_update_backup == 'Update' THEN
+                          UpsertData(@de_cec_backup,7,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'backup_id',@backup_id,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID)
+                        ELSEIF @create_or_update_backup == 'Create' THEN
+                          InsertData(@de_cec_backup,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'backup_id',@new_backup_id,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID)
+                        ENDIF 
+                      ENDIF 
+                    ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                      InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'CreatedBy',@userName,'CreatedDate',@localTime) 
+                    ENDIF 
+                  ENDIF 
+                ENDIF 
+              ELSE 
+                SET @de_active = IIF(@deField == 'quoteText',0,1)
+                SET @deValue = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.', @deField,@edit_eca_EventID,'}}'))
+                IF @deField != 'freeText' THEN
+                  IF @deField == 'dinkus_option' THEN
+                    SET @edit_contentBlock_dinkus_option = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','dinkus_option',@edit_eca_EventID,'}}'))
+                    IF @edit_contentBlock_dinkus_option == 'SFMC dinkus' THEN 
+                      SET @edit_contentBlock_dinkus = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','dinkus',@edit_eca_EventID,'}}')) 
+                      SET @new_cb_dinkus = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','NewDinkus',@edit_eca_EventID,'}}'))) 
+                      SET @new_cb_dinkusFriendly = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','NewDinkusFriendlyName',@edit_eca_EventID,'}}')))
+                      IF @edit_contentBlock_dinkus == 'New' AND RowCount(LookupRows(@customDropdown_obj,'Name',@new_cb_dinkus,'Group','Dinkus','Brand',@de_e_Brand)) == 0 THEN
+                        SET @edit_contentBlock_dinkus = @new_cb_dinkus
+                        InsertData(@customDropdown_obj,'Group','Dinkus','Id',GUID(),'CreatedDate',@LocalTime,'CreatedBy',@userName,'Name',@new_cb_dinkus,'Brand',@de_e_Brand,'FriendlyName',@new_cb_dinkusFriendly,'Active','1')
+                      ELSEIF @edit_contentBlock_dinkus == 'New' THEN
+                        SET @edit_contentBlock_dinkus = @new_cb_dinkus
+                        SET @FormMessage = Concat(@FormMessage, ' The new dinkus you tried to create already exists.')
+                      ENDIF
+                      TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%'))
+                      IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND @dinkus_section == 1 THEN
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','SFMC dinkus','UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_dinkus,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                      ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','SFMC dinkus','CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_dinkus,'CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                      ENDIF
+                    ELSEIF @edit_contentBlock_dinkus_option == 'App Centre dinkus' THEN
+                      SET @edit_contentBlock_d_save_for_later = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','d_save_for_later',@edit_eca_EventID,'}}'))
+                      SET @edit_contentBlock_d_name = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','d_name',@edit_eca_EventID,'}}'))) 
+                      SET @edit_contentBlock_d_title = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','d_title',@edit_eca_EventID,'}}')))
+                      SET @edit_contentBlock_d_image_url = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','d_image_url',@edit_eca_EventID,'}}'))) 
+                      SET @edit_contentBlock_d_small_img_url_check = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','d_small_img_url_check',@edit_eca_EventID,'}}')))
+                      SET @d_name_value = Concat('{"d_name":"',@edit_contentBlock_d_name,'","d_title":"',@edit_contentBlock_d_title,'","d_image_url":"',@edit_contentBlock_d_image_url,'","d_small_img_url_check":"',@edit_contentBlock_d_small_img_url_check,'"}')
+                      IF NOT EMPTY(@edit_contentBlock_d_name) OR NOT EMPTY(@edit_contentBlock_d_title) THEN
+                        SET @edit_contentBlock_appC_dinkus = Concat(@edit_contentBlock_d_name,' (',@edit_contentBlock_d_title,')')
+                        IF @edit_contentBlock_d_save_for_later == true AND @dinkus_section == 1 THEN
+                          UpsertData(@customDropdown_obj,2,'Group','appC_dinkus','Id',@edit_contentBlock_appC_dinkus,'CreatedDate',@LocalTime,'CreatedBy',@userName,'Name',@d_name_value,'Brand',@de_e_Brand,'FriendlyName',@edit_contentBlock_appC_dinkus,'Active','1')
+                        ENDIF
+                      ELSEIF EMPTY(@edit_contentBlock_d_name) AND EMPTY(@edit_contentBlock_d_title) AND @edit_contentBlock_d_save_for_later == true THEN
+                        SET @formMessage = Concat(@formMessage," Couldn't save dinkus for later as you need to at least specify a name or a title.")
+                      ENDIF
+                      TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%')) 
+                      IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND @dinkus_section == 1 THEN 
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_dinkus_option,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','appC_dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_appC_dinkus,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active) 
+                      ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_dinkus_option,'CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','appC_dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@edit_contentBlock_appC_dinkus,'CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active) 
+                      ENDIF
+                    ELSEIF @edit_contentBlock_dinkus_option == 'No dinkus' THEN
+                      IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND @dinkus_section == 1 THEN 
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','No dinkus','UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','','UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active) 
+                      ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus_option','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','No dinkus','CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active) 
+                        InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name','dinkus','Component','contentBlock','Template',@edit_eca_ContentBlock,'Value','','CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                      ENDIF
+                    ENDIF
+                  ELSEIF @deField == 'greeting' THEN
+                    SET @edit_contentBlock_greeting = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','greeting',@edit_eca_EventID,'}}'))
+                    IF EMPTY(@edit_contentBlock_greeting) THEN 
+                      SET @edit_contentBlock_greeting = 'No greeting' 
+                    ENDIF
+                    SET @new_cb_greeting = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.','NewGreeting',@edit_eca_EventID,'}}'))) 
+                    IF @edit_contentBlock_greeting == 'New' AND RowCount(LookupRows(@customDropdown_obj,'Name',@new_cb_greeting,'Group','Greetings')) == 0 THEN
+                      SET @edit_contentBlock_greeting = @new_cb_greeting 
+                      SET @deValue = @new_cb_greeting 
+                      InsertData(@customDropdown_obj,'Group','Greetings','Id',GUID(),'CreatedDate',@LocalTime,'CreatedBy',@userName,'Name',@new_cb_greeting,'Brand',@de_e_Brand,'Active','1') 
+                    ELSEIF @edit_contentBlock_greeting == 'New' THEN
+                      SET @deValue = @new_cb_greeting 
+                      SET @FormMessage = Concat(@FormMessage, ' The new greeting you tried to create already exists.') 
+                    ELSE
+                      SET @deValue = @edit_contentBlock_greeting 
+                    ENDIF
+                  ELSEIF @deField == 'CollectionID' THEN 
+                    IF @add_new_coll_id == 1 AND RowCount(LookupRows(@customDropdown_obj,'Name',@new_cb_CollectionID,'Group','CollectionIds','Brand',@de_e_Brand)) == 0 THEN 
+                      SET @new_cc_Description = Trim(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.NewColIdDesc',@edit_eca_EventID,'}}'))) 
+                      InsertData(@customDropdown_obj,'Group','CollectionIds','Id',GUID(),'CreatedDate',@LocalTime,'CreatedBy',@userName,'Name',@new_cb_CollectionID,'Description',@new_cc_Description,'Brand',@de_e_Brand,'Active','1') 
+                    ELSEIF @add_new_coll_id == 1 AND RowCount(LookupRows(@customDropdown_obj,'Name',@new_cb_CollectionID,'Group','CollectionIds','Brand',@de_e_Brand)) > 0 THEN 
+                      SET @FormMessage = Concat(@FormMessage, ' The new collection ID you tried to add already exists. ') 
+                    ENDIF
+                      SET @deValue = @new_cb_CollectionID
+                  ELSEIF @edit_eca_use_more_cts == true AND indexOf(@deField,'_cts') > 1 THEN 
+                    for @cts_rows = 2 to @edit_contentBlock_MaxArticles do 
+                      SET @deValue = Concat(@deValue,'@#$%^&',TreatAscontent(Concat('%%{={{ }}=}%%','{{data.',@deField,'_',@cts_rows,@edit_eca_EventID,'}}'))) 
+                    next @cts_rows
+                  ENDIF
+                  IF @deField != 'appC_dinkus' AND @deField != 'dinkus' AND @deField != 'dinkus_option' THEN
+                    TreatAsContent(CONCAT('%','%[ SET @edit_contentBlock_',@deField,' = "',@deValue,'" ]%','%')) 
+                    IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') AND (@deValue != @current_value OR @action_area == 'decouple') THEN 
+                      UpsertData(@de_cec,6,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                      IF @make_backup == 1 AND (@de_appC_cc_Name == 'curated_collection' OR @de_appC_cc_Name == 'recommended_collection' OR @de_appC_cc_Name == 'video_collection') THEN
+                        IF @create_or_update_backup == 'Update' THEN 
+                          UpsertData(@de_cec_backup,7,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'backup_id',@backup_id,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        ELSEIF @create_or_update_backup == 'Create' THEN 
+                          InsertData(@de_cec_backup,'EventID',@result_CB_ID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'backup_id',@new_backup_id,'Value',@deValue,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active)
+                        ENDIF
+                      ENDIF
+                    ELSEIF @action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup' THEN
+                      InsertData(@de_cec,'EventID',@new_eca_EventID,'EmailName',@sourceIdValue,'Brand',@de_e_Brand,'Name',@deField,'Component','contentBlock','Template',@edit_eca_ContentBlock,'Value',@deValue,'CreatedBy',@userName,'CreatedDate',@localTime,'UpdatedBy',@userName,'UpdatedDate',@localTime,'MemberID',@de_e_MemberID,'Active',@de_active) 
+                    ENDIF
+                  ENDIF
+                ENDIF 
+              ENDIF 
+            next @var 
+          ENDIF
+        ENDIF
+        IF @formStatus != 0 THEN 
+          IF @Role != 'Editor' THEN
+            IF @role != 'Editor' AND @role != 'editorPlus' AND @formStatus != 0 AND ((@block_section == 1 AND @action_area == 'edit') OR (@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup')) THEN
+              IF @action_area == 'add' OR @action_area == 'duplicate_from_other_email' THEN 
+                IF @edit_eca_PositionInEmail < Add(@CVBRowCount,1) THEN 
+                  SET @posCounter = Add(@edit_eca_PositionInEmail,1) 
+                  for @posChange = @edit_eca_PositionInEmail to @CVBRowCount do 
+                    SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID')
+                    IF @posChange <= Add(@CVBRowCount,1) THEN 
+                      UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@posCounter,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                    ENDIF 
+                    SET @posCounter = Add(@posCounter,1) 
+                  next @posChange 
+                ENDIF 
+              ELSEIF @action_area == 'duplicate' THEN
+                SET @posCounter = Add(@edit_eca_PositionInEmail,2) 
+                for @posChange = Add(@edit_eca_PositionInEmail,1) to RowCount(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue)) do
+                  SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID')
+                  IF @posChange <= Add(@CVBRowCount,1) AND @posChange >= Add(@edit_eca_PositionInEmail,1) THEN 
+                    UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@posCounter,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                  ENDIF 
+                  SET @posCounter = Add(@posCounter,1) 
+                next @posChange 
+              ELSE 
+                IF @edit_eca_PositionInEmail < @de_eca_PositionInEmail AND NOT EMPTY(@de_eca_PositionInEmail) THEN 
+                  SET @posCounter = Add(@edit_eca_PositionInEmail,1) 
+                  for @posChange = @edit_eca_PositionInEmail to @CVBRowCount do 
+                    SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID')     
+                    IF @edit_eca_EventID == @eventID_posChange THEN 
+                      UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@edit_eca_PositionInEmail,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                    ELSEIF @posChange <= @de_eca_PositionInEmail THEN 
+                      UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@posCounter,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                    ENDIF 
+                    SET @posCounter = Add(@posCounter,1) 
+                  next @posChange 
+                ELSEIF @edit_eca_PositionInEmail > @de_eca_PositionInEmail AND NOT EMPTY(@de_eca_PositionInEmail) THEN 
+                  SET @posCounter = @de_eca_PositionInEmail 
+                  for @posChange = @de_eca_PositionInEmail to @CVBRowCount do 
+                    SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID')
+                    IF @edit_eca_EventID == @eventID_posChange THEN 
+                      UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@edit_eca_PositionInEmail,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                    ELSEIF @posChange <= @edit_eca_PositionInEmail THEN 
+                      UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',Subtract(@posCounter,1),'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                    ENDIF 
+                    SET @posCounter = Add(@posCounter,1) 
+                  next @posChange
+                ELSEIF EMPTY(@de_eca_PositionInEmail) THEN 
+                  for @posChange = 1 to @CVBRowCount do 
+                    SET @eventID_posChange = Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'EventID')
+                    IF EMPTY(Field(Row(LookupORderedRows(@de_eca,0,'PositionInEmail ASC','EmailName',@sourceIdValue),@posChange),'PositionInEmail')) THEN
+                      SET @edit_eca_PositionInEmail = @posChange
+                    ENDIF 
+                    UpdateData(@de_eca,2,'EventID',@eventID_posChange,'EmailName',@sourceIdValue,'PositionInEmail',@posChange,'UpdatedDate',@LocalTime,'UpdatedBy',@Username)
+                  next @posChange 
+                ENDIF 
+              ENDIF 
+            ENDIF
+            IF @role != 'editorPlus' AND (@block_section == 1 OR @make_backup == 1 OR @action_area == 'add' OR @action_area == 'duplicate' OR @action_area == 'decouple' OR @action_area == 'duplicate_from_other_email') THEN
+              SET @edit_eca_field_set = '' 
+              for @var = 1 to RowCount(LookupRows(@sysFieldsDe,'Template','none','component','email_content_areas','Active','1','default_group','0')) do
+                SET @sys_eca_rows = LookupRows(@sysFieldsDe,'Template','none','component','email_content_areas','Active','1','default_group','0')
+                SET @deField = Field(Row(@sys_eca_rows,@var),'field_name') 
+                SET @deData_type = Field(Row(@sys_eca_rows,@var),'data_type')
+                IF @action_area == 'backup' THEN
+                  SET @deValue = Lookup(@de_eca_backup,@deField,'EventID',@edit_eca_EventID,'backup_id',@backup_id)
+                ELSE 
+                  SET @deValue = Lookup(@de_eca,@deField,'EventID',@edit_eca_EventID)
+                ENDIF 
+                TreatAsContent(CONCAT('%','%[ SET @de_eca_',@deField,' = "',@deValue,'" ]%','%'))
+                SET @deValue = ''
+                IF @role != 'Editor' THEN SET @deValue = TreatAscontent(Concat('%%{={{ }}=}%%','{{data.',@deField,'}}')) ENDIF 
+                IF EMPTY(@deValue) AND @deData_type == 'boolean' THEN SET @deValue = 0 ENDIF 
+                IF @deField != 'EventID' AND @deField != 'ContentBlock' AND @deField != 'PositionInEmail' AND @deField != 'Visible' AND @deField != 'shared' AND @deField != 'shared_with_all' THEN 
+                  TreatAsContent(CONCAT('%','%[ SET @edit_eca_',@deField,' = "',@deValue,'" ]%','%'))
+                  SET @edit_eca_field_set = Concat(@edit_eca_field_set,',"',@deField,'","',@deValue,'"') 
+                ENDIF 
+                IF @var == RowCount(@sys_eca_rows) THEN 
+                  IF (@action_area == 'edit' OR @action_area == 'decouple' OR @action_area == 'backup') THEN 
+                    TreatAsContent(CONCAT('%','%[ UpdateData(@de_eca,1,"EventID",@result_CB_ID,"ContentBlock",@edit_eca_ContentBlock,"UpdatedBy",@userName,"UpdatedDate",@localTime,"json_data",@formPost_data',@edit_eca_field_set,') ]%','%'))
+                    IF @make_backup == 1 THEN
+                      IF @create_or_update_backup == 'Update' THEN 
+                        TreatAsContent(CONCAT('%','%[ UpsertData(@de_eca_backup,3,"EventID",@result_CB_ID,"EmailName",@sourceIdValue,"backup_id",@backup_id,"ContentBlock",@edit_eca_ContentBlock,"UpdatedBy",@userName,"UpdatedDate",@localTime,"json_data",@formPost_data',@edit_eca_field_set,') ]%','%'))
+                      ELSEIF @create_or_update_backup == 'Create' THEN
+                        TreatAsContent(CONCAT('%','%[ InsertData(@de_eca_backup,"EventID",@result_CB_ID,"EmailName",@sourceIdValue,"backup_id",@new_backup_id,"ContentBlock",@edit_eca_ContentBlock,"UpdatedBy",@userName,"UpdatedDate",@localTime,"json_data",@formPost_data',@edit_eca_field_set,') ]%','%'))
+                      ENDIF
+                    ENDIF
+                  ELSE
+                    IF @action_area == 'duplicate' THEN SET @edit_eca_PositionInEmail = Add(@edit_eca_PositionInEmail,1) ENDIF
+                    InsertData(@de_eca,'PositionInEmail',@edit_eca_PositionInEmail,'ContentBlock',@edit_eca_ContentBlock,'EmailName',@sourceIdValue,'EventID',@new_eca_EventID,'default_template_settings',@edit_eca_default_template_settings,'UpdatedDate',@LocalTime,'UpdatedBy',@Username,'CreatedBy',@userName,'CreatedDate',@localTime,'friendly_name',@edit_eca_friendly_name,'marketing',@edit_eca_marketing,'hide_from_prem_subs',@edit_eca_hide_from_prem_subs,'hide_before_date',@edit_eca_hide_before_date,'hide_after_date',@edit_eca_hide_after_date,'hide_set_of_days',@edit_eca_hide_set_of_days,"json_data",@formPost_data,'use_ref_cb_hide',@edit_eca_use_ref_cb_hide,'use_hide_after_date',@edit_eca_use_hide_after_date,'use_hide_before_date',@edit_eca_use_hide_before_date) 
+                  ENDIF
+                ENDIF 
+              next @var 
+            ELSEIF @block_section != 1 AND @action_area == 'edit' THEN 
+              UpsertData(@de_eca,2,"EventID",@result_CB_ID,"EmailName",@sourceIdValue,"ContentBlock",@edit_eca_ContentBlock,"UpdatedBy",@userName,"UpdatedDate",@localTime,"json_data",@formPost_data) 
+            ENDIF
+            SET @action_area_text = IIF((@action_area == 'duplicate' OR @action_area == 'duplicate_from_other_email'),'duplicat',@action_area)
+            SET @action_area_text = IIF(@action_area == 'decouple','decoupl',@action_area_text)
+            IF @de_appC_cc_FriendlyName == 'Custom content block' THEN SET @de_appC_cc_FriendlyName = @edit_eca_ContentBlock ENDIF 
+            SET @f_name = Concat(@de_appC_cc_FriendlyName,IIF(NOT EMPTY(@de_eca_friendly_name),Concat(' | ',@de_eca_friendly_name),''))
+            IF @action_area == 'duplicate_from_other_email' THEN
+              SET @FormMessage = Concat('Successfully <strong>',@action_area_text,'ed</strong> content block <strong>',@f_name,'</strong> from the email <strong>',Lookup(@de_eca,'EmailName','EventID',@edit_eca_EventID),'</strong> into the email <strong>',@sourceIdValue,'</strong>.')
+            ELSEIF @action_area == 'decouple' THEN
+              SET @FormMessage = Concat('Successfully <strong>',@action_area_text,'ed</strong> content block <strong>',@f_name,'</strong> in the email <strong>',Lookup(@de_eca,'EmailName','EventID',@to_use_postData_cb_id),'</strong> from the email <strong>',@sourceIdValue,'</strong>.')
+            ELSEIF @action_area == 'backup' THEN
+              SET @FormMessage = Concat('Successfully used the <strong>backup content</strong> for the content block <strong>',@f_name,'</strong> in the email <strong>',Lookup(@de_eca,'EmailName','EventID',@to_use_postData_cb_id),'</strong>.')
+            ELSE 
+              SET @FormMessage = Concat('Successfully <strong>',@action_area_text,'ed</strong> content block <strong>',@f_name,'</strong> in the email <strong>',@sourceIdValue,'</strong>.')
+            ENDIF
+            IF @create_or_update_backup == 'Delete' AND @formStatus != 0 THEN
+              DeleteData(@de_cec_backup,'backup_id',@backup_id)
+              DeleteData(@de_ecc_backup,'backup_id',@backup_id)
+              DeleteData(@de_eca_backup,'backup_id',@backup_id)
+            ENDIF
+            IF @de_appC_cc_Name != 'curated_collection' AND @de_appC_cc_Name != 'recommended_collection' AND @de_appC_cc_Name != 'video_collection' AND @de_appC_cc_Name != 'customBlockByKey' AND (@ref_cb != 1 OR @action_area == 'decouple') THEN
+              SET @edit_emailTemplate_template_width = IIF(EMPTY(@edit_emailTemplate_template_width),650,@edit_emailTemplate_template_width) 
+              SET @content_width_header = IIF(EMPTY(@edit_contentBlock_content_width),615,@edit_contentBlock_content_width) 
+              SET @body_padding_header = Divide(Subtract(@edit_emailTemplate_template_width,@content_width_header),2) 
+              SET @de_appC_cc = 'ent.AppC_components_code' 
+              SET @CBVRowCount = @CVBRowCount 
+              SET @emailName = @sourceIdValue
+              SET @de_e_additional_email_params = Lookup(@de_emailObject,'additional_email_params','EmailName',@sourceIdValue)
+              SET @de_e_utmSource = Lookup(@de_emailObject,'utmSource','EmailName',@sourceIdValue)
+              SET @de_e_utmMedium = Lookup(@de_emailObject,'utmMedium','EmailName',@sourceIdValue)
+              SET @de_e_utmCampaign = Lookup(@de_emailObject,'utmCampaign','EmailName',@sourceIdValue)
+              SET @de_e_utmContent = Lookup(@de_emailObject,'utmContent','EmailName',@sourceIdValue)
+              SET @CCBSecret = IIF(@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup',@cb_EventID,IIF(@action_area == 'decouple',@form_cb_id,@edit_eca_EventID)) 
+              SET @de_e_Environment = @environmentAppCentre 
+              SET @de_AppC_emailCode = IIF(@de_e_Environment == 'SIT','ent.AppC_SIT_emailcode','ent.AppC_emailcode') 
+              SET @cbPos = @edit_eca_PositionInEmail 
+              SET @add_nr_of_links = 0
+              SET @de_cec_res = @de_cec
+              ]%%<script runat=server>try{</script>%%[ 
+              IF @de_e_Environment == 'UAT' THEN 
+                SET @ContentBlock = TreatAsContent(HTTPGET(Lookup('ent.AppC_emailcode','URL','Name',@edit_eca_ContentBlock))) 
+              ELSE 
+                SET @ContentBlock = TreatAsContent(Lookup(@de_AppC_emailCode,'Code','Name',@edit_eca_ContentBlock)) 
+              ENDIF 
+              ]%%<script runat=server>} catch (e){Platform.Variable.SetValue("@formStatus",0);Platform.Variable.SetValue("@formMessage",Platform.Function.Stringify(e.description));Platform.Variable.SetValue("@fn_target_field",Platform.Function.Stringify(e));var sourceSubObjTableValue = Platform.Variable.GetValue("@sourceSubObjTableValue");Platform.Variable.SetValue("@fn_SubObject",sourceSubObjTableValue);Platform.Variable.SetValue("@message_color",'danger');}</script>%%[
+              IF @formStatus != 0 THEN 
+                UpdateData(@sourceTable,1,'EmailName',@sourceIdValue,'UpdatedDate',@LocalTime,'UpdatedBy',@Username) 
+                IF @preview_mode == 'focused' THEN 
+                  UpdateData('ent.Users',1,'Username',@userName,'preview_section',IIF(@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup',@new_eca_EventID,@result_CB_ID)) 
+                ENDIF
+                IF @action_area != 'backup' THEN
+                  UpsertData(@de_ecc,3,'content_id',@result_CB_ID,'EmailName',@sourceIdValue,'content_type','contentBlock','content_name',@edit_eca_ContentBlock,'friendly_name',@edit_eca_friendly_name,'PositionInEmail',@cbPos,'nr_of_links','','UpdatedDate',@localTime,'email_template',@de_e_email_template,'HTML',@ContentBlock)
+                  IF @make_backup == 1 THEN
+                    IF @create_or_update_backup == 'Update' THEN 
+                      UpsertData(@de_ecc_backup,4,'content_id',@result_CB_ID,'EmailName',@sourceIdValue,'content_type','contentBlock','backup_id',@backup_id,'content_name',@edit_eca_ContentBlock,'friendly_name',@edit_eca_friendly_name,'PositionInEmail',@cbPos,'nr_of_links','','UpdatedDate',@localTime,'email_template',@de_e_email_template,'HTML',@ContentBlock)
+                    ELSEIF @create_or_update_backup == 'Create' THEN
+                      InsertData(@de_ecc_backup,'content_id',@result_CB_ID,'EmailName',@sourceIdValue,'content_type','contentBlock','backup_id',@new_backup_id,'content_name',@edit_eca_ContentBlock,'friendly_name',@edit_eca_friendly_name,'PositionInEmail',@cbPos,'nr_of_links','','UpdatedDate',@localTime,'email_template',@de_e_email_template,'HTML',@ContentBlock)
+                    ENDIF
+                  ENDIF
+                ELSE
+                  UpsertData(@de_ecc,3,'content_id',@result_CB_ID,'EmailName',@sourceIdValue,'content_type','contentBlock','content_name',@edit_eca_ContentBlock,'friendly_name',@edit_eca_friendly_name,'PositionInEmail',@cbPos,'nr_of_links','','UpdatedDate',@localTime,'email_template',@de_e_email_template,'HTML',@ContentBlock)
+                ENDIF
+              ELSE 
+                IF @preview_mode == 'focused' THEN 
+                  UpdateData('ent.Users',1,'Username',@userName,'preview_section','') 
+                ENDIF 
+              ENDIF 
+            ELSEIF @formStatus != 0 THEN
+              UpdateData(@sourceTable,1,'EmailName',@sourceIdValue,'UpdatedDate',@LocalTime,'UpdatedBy',@Username)
+              IF @preview_mode == 'focused' THEN 
+                UpdateData('ent.Users',1,'Username',@userName,'preview_section',IIF(@action_area != 'edit' AND @action_area != 'decouple' AND @action_area != 'backup',@new_eca_EventID,@result_CB_ID)) 
+              ENDIF
+            ELSEIF @message_color != 'warning' THEN 
+              IF @preview_mode == 'focused' THEN 
+                UpdateData('ent.Users',1,'Username',@userName,'preview_section','') 
+              ENDIF 
+            ENDIF 
+          ENDIF 
+        ENDIF 
+      ENDIF
+      ]%%{{/datasource}}%%[
+    ENDIF
+  ELSE 
+    SET @formStatus = 0 SET @message_color = 'danger'
+    SET @errorMessage = @formMessage
+  ENDIF
+  IF @formStatus != 0 AND @make_backup == 1 THEN
+    SET @formMessage = Concat(@formMessage,' Successfully <strong>',Concat(LowerCase(@create_or_update_backup),'d</strong>'),' ',IIF(@create_or_update_backup == 'Create','a','the selected'),' backup.')
+  ENDIF 
+  IF @environmentAppCentre == 'UAT' THEN 
+    SET @formMessage = Concat(@formMessage, '@edit_contentBlock_dinkus: ',@edit_contentBlock_dinkus,' @edit_contentBlock_dinkus_option: ',Lookup(@de_cec,'Value','EventID',@edit_eca_EventID,'Name','dinkus_option','Template',@edit_eca_ContentBlock,'Active','1','Component','contentBlock','EmailName',@sourceIdValue),' if? ',IIF(TreatAscontent(Concat('%%{={{ }}=}%%','{{data.opens_dinkus}}')) == 'yes','yup','no'),' edit_eca_EventID: ',@edit_eca_EventID,' edit_eca_Contentblock: ',@edit_eca_ContentBlock,' sourceIdValue: ',@sourceIdValue,' @de_e_Environment: ',@de_e_Environment,' @edit_contentBlock_d_layout: ',@edit_contentBlock_d_layout,' d_name: ',@edit_contentBlock_d_name,' | edit_contentBlock_freeText_font_color: ',@edit_contentBlock_freeText_font_color,' do_not_action: ',@do_not_action,' action_area: ',@action_area, ' ref_cb: ',@ref_cb,' make_backup: ',@make_backup,' de_appC_cc_Name: ',@de_appC_cc_Name,' edit_contentBlock_CollectionID: ',@edit_contentBlock_CollectionID,' test: ',@test,' backup_id: ',@backup_id,' new backup_id: ',@new_backup_id, ' create_or_update_backup: ',@create_or_update_backup,' edit_eca_PositionInEmail: ',@edit_eca_PositionInEmail, ' CvbRowCount: ',@CvbRowCount,' testing: ',@testing,' block_section: ',@block_section,'@ew_cb_greeting: ',@new_cb_greeting,' edit_contentBlock_greeting: ',@edit_contentBlock_greeting,' t: ',@t)
+  ENDIF
+  IF EMPTY(@formStatus) THEN SET @formStatus = 1 SET @message_color = 'success'
+  ELSEIF EMPTY(@message_color) OR EMPTY(@formMessage) THEN SET @formStatus = 0 SET @message_color = 'danger' SET @errorMessage = @formMessage ENDIF
+  IF @message_color == 'warning' THEN SET @fn_Displayed = 1 SET @fn_SubObjValue = @sourceIdSubjValue SET @fn_SubObject = @sourceSubObjTableValue ENDIF
+  IF @formStatus == 0 AND @message_color != 'warning' THEN SET @fn_SubObjValue = @sourceIdSubjValue SET @fn_SubObject = @sourceSubObjTableValue
+    IF @preview_mode == 'focused' THEN UpdateData('ent.Users',1,'Username',@userName,'preview_section','') ENDIF
+  ENDIF 
+  IF @do_not_action != 1 THEN
+    InsertData(@stateDE,'EventID',@appEventID,'Object',IIF(EMPTY(@fn_Object),@appObject,@fn_Object),'SectionName',@currentAppSectionName,'SessionID',@cookie,'Message',@formMessage,'Displayed',IIF(EMPTY(@fn_Displayed),IIF(EMPTY(@fn_Action),1,0),@fn_Displayed),'DateAdded',@localTime,'Username',@username,'Status',IIF(EMPTY(@formStatus),1,@formStatus),'Value',@fn_Value,'ShowInactive',@showInactive,'Environment',IIF(EMPTY(@fn_Environment),@appStateEnvironment,@fn_Environment),'Section',@currentAppSection,'FormName',@formName,'Action',@fn_Action,'SubObject',IIF(NOT EMPTY(@navSel) OR EMPTY(@fn_Value),'',IIF(EMPTY(@fn_SubObject),@sourceSubObjTableValue,@fn_SubObject)),'SubObjValue',IIF(NOT EMPTY(@navSel) OR EMPTY(@fn_Value),'',IIF(EMPTY(@fn_SubObjValue),'',@fn_SubObjValue)),'FilterBU',@currentBrandFilter,'Progress',IIF(EMPTY(@fn_Progress) OR EMPTY(@fn_Value),IIF(@ParentApp != 'Analytics',0,30),@fn_Progress),'target_field','','brand_state',IIF(EMPTY(@fn_brand_state) OR EMPTY(@fn_Value),@userCurrentBrand,@fn_brand_state),'fields_state',IIF(EMPTY(@fn_fields_state) OR EMPTY(@fn_Value),@CurrentFields_state,@fn_fields_state),'appC_env',@environmentAppCentre)
+  ENDIF
+  IF @formStatus == 0 OR indexOf(@formMessage,'ExactTarget.OMM') > 0 THEN SET @errorMessage = @formMessage
+    IF @role != 'Admin' AND indexOf(@formMessage,'ExactTarget.OMM') > 0 THEN
+      SET @formMessage = 'The SFMC team is currently fixing a bug in this app and will get in touch once its ready to be used again. Thank you for your patience.'
+    ENDIF
+    IF indexOf(@formMessage,'ExactTarget.OMM') > 0 THEN 
+      SET @json_output = Concat('{"message_color":"',@message_color,'","form_message":',@formMessage,'}')
+    ELSE
+      SET @json_output = Concat('{"message_color":"',@message_color,'","form_message":"',@formMessage,'"}')
+    ENDIF
+  ELSE 
+    SET @json_output = Concat('{"message_color":"',@message_color,'","form_message":"',@formMessage,'"}')
+  ENDIF
+   ]%%%%=v(@json_output)=%%%%[ 
+ELSEIF RowCount(LookupRows('ent.Users','SessionID',@cookie)) > 0 AND FormatDate(@app_LastLoginDate,"DD-MM-YYYY") != FormatDate(@localTime, "DD-MM-YYYY") THEN ]%%{"message":"reloadpage"}%%[ 
+ELSE ]%%%%=RaiseError('Invalid request')=%%%%[ 
+ENDIF ]%%
