@@ -1,0 +1,457 @@
+%%[
+SET @AppCPermissionTable = IIF(@appStateEnvironment == "UAT",'ent.AppC_AppPermissions_UAT','ent.AppC_AppPermissions')
+SET @de_emailObject = IIF(@AppStateEnvironment == 'UAT','ent.EmailObject_UAT','ent.EmailObject')
+SET @de_ani = IIF(@AppStateEnvironment == 'UAT','ent.All_Newsletter_Info_UAT','ent.All_Newsletter_Info')
+SET @de_abi = IIF(@AppStateEnvironment == 'UAT','ent.All_Brand_Info_UAT','ent.All_Brand_Info')
+SET @de_eca = IIF(@AppStateEnvironment == 'UAT','ent.email_contentBlock_areas_UAT','ent.email_contentBlock_areas')
+SET @de_appC_send_log = IIF(@AppStateEnvironment == 'UAT','ent.appC_send_log_uat','ent.appC_send_log')
+SET @sourceIdRowCount = RowCount(LookupOrderedRows(@stateDE,50,'DateAdded DESC','username',@username,'Environment',@AppStateEnvironment))
+IF @sourceIdRowCount > 0 THEN
+  SET @sourceIdRows = LookupOrderedRows(@stateDE,50,'DateAdded DESC','username',@username,'Environment',@AppStateEnvironment)
+ENDIF
+SET @AppC_Notifications_Object = "Value,Object,SubObject,SubObjValue,Environment,Username,brand_state,Action,DateAdded"
+SET @de_p_obj = IIF(@AppStateEnvironment == 'UAT','ent.programs_obj_uat','ent.programs_obj')
+]%%
+<div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
+      <h5 class="explainerthree" style="margin-top:-15px!important;margin-bottom:0;" title-grid-box-style">Your recent activities</h5>
+      <form action="javascript:void(0);" accept-charset="UTF-8" class="form-inline">
+        <input class="form-control mr-sm-2 inputsearchbutton" type="search" autocomplete="off" placeholder="Search for any keyword in the below tables..." aria-label="Search" style="position: fixed;top: 47px!important;z-index: 1200;height:21px;" id="assetsInputSearch">
+      </form>
+    </div>
+    <div class="assetCard">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <div class="assetRowContainer" style="padding:0px;">
+                <table id="recentTabelHeader">
+                  <tr>
+                    <td onclick="sortHomeTable(0, 'recentTabelBody')" style="width:50px !important;" class="clickable asc">Nr</td>
+                    <td onclick="sortHomeTable(1, 'recentTabelBody')" style="width:130px !important;" class="clickable asc">Brand</td>
+                    <td onclick="sortHomeTable(2, 'recentTabelBody')" style="width:150px!important;" class="clickable asc">App</td>
+                    <td onclick="sortHomeTable(3, 'recentTabelBody')" class="clickable asc">Item</th>
+                    <td onclick="sortHomeTable(4, 'recentTabelBody')" style="width:420px !important;" class="clickable asc">Section</td>
+                    <td onclick="sortHomeTable(5, 'recentTabelBody')" style="width:120px !important;" class="clickable asc">Event date</td>
+                    <td style="width:65px !important;"></td>
+                    <td style="width:5px !important;padding-left:0;"></td>
+                  </tr>
+                </table>
+              </div>
+          </h5>
+        </div>
+    </div>
+    <div class="list_view_table_row_container" style="height:20%;max-height: 150px!important;margin-bottom:5px!important;">
+      <form action="" accept-charset="UTF-8" method="post" aria-labelledby="FilterAsset" id="FilterAsset">
+        <table id="recentTabelBody" class="home-grid">
+        <tr class="veryfirstrow">
+           <td></td>
+           <td></td> 
+           <td></td> 
+           <td></td> 
+           <td></td> 
+           <td></td> 
+           <td></td> 
+        </tr>
+        %%[
+        SET @tally = 0
+        SET @string = ""
+        for @e = 1 to @sourceIdRowCount do
+          SET @src_EventID = Field(Row(@sourceIdRows,@e),'EventID')
+          for @var = 1 to RowCount(BuildRowSetFromString(@AppC_Notifications_Object)) do 
+            SET @deField = Field(Row(BuildRowSetFromString(@AppC_Notifications_Object),@var),1)
+            IF @deField != "Message" THEN
+              TreatAsContent(CONCAT('%','%[ SET @src_',@deField,' = "',Lookup(@stateDE,@deField,'EventID',@src_EventID),'" ]%','%'))
+            ENDIF
+          next @var
+          SET @currentAppSectionValue = IIF(EMPTY(@CurrentAppSectionName),Lookup(@stateDE,'DateAdded','EventID',@src_Value),Lookup(@stateDE,Replace(Replace(@CurrentAppSectionName,'DESC',''),'ASC',''),'EventID',@src_Value))
+          ENDIF
+          IF NOT EMPTY(@src_Value) AND IndexOf(@string,Concat(@src_Value,@src_SubObject,@src_Environment,@src_brand)) < 1 THEN 
+            IF (
+                (
+                  RowCount(LookupRows(@de_emailObject,'EmailName',@src_Value)) > 0 OR RowCount(LookupRows(@de_abi,'Brand',@src_Value)) > 0 OR RowCount(LookupRows(@de_ani,'NewsletterID',@src_Value)) > 0
+                ) AND (@src_Object == 'Email Editor' OR @src_Object == 'Tile Editor' OR @src_Object == 'Brand Editor')
+              ) 
+            OR (@src_Object != 'Email Editor' AND @src_Object != 'Tile Editor' AND @src_Object != 'Brand Editor') THEN
+              SET @tally = Add(@tally,1)
+              SET @string = Concat(@string,@src_Value,@src_SubObject,@src_Environment,@src_brand)
+              IF @tally < 10 THEN 
+                IF EMPTY(@src_Brand_state) THEN
+                  IF @src_Object == 'Email Editor' OR @src_Object == 'Email Send History' THEN
+                    SET @src_Brand_state = Lookup(@de_emailObject,'Brand','EmailName',@src_Value)
+                  ELSEIF @src_Object == 'Tile Editor' OR @src_Object == 'Subscribe History' THEN
+                    SET @src_Brand_state = Lookup(@de_ani,'Brand','NewsletterID',@src_Value)
+                  ELSEIF @src_Object == 'Brand Editor' THEN
+                    SET @src_Brand_state = Lookup(@de_abi,'Brand','Brand',@src_Value)
+                  ELSE
+                    SET @src_Brand_state = 'All brands'
+                  ENDIF
+                ELSE 
+                  IF @src_Object == 'Email Editor' AND @src_SubObject == 'Content block settings' AND RowCount(LookupRows(@de_eca,'EventID',@src_SubObjValue)) > 0 THEN
+                    SET @friendly_cb_name = Lookup(@de_eca,'friendly_name','EventID',@src_SubObjValue)
+                    SET @cb_name = Lookup(@de_eca,'ContentBlock','EventID',@src_SubObjValue)
+                    SET @pos_in_email_cb = Lookup(@de_eca,'PositionInEmail','EventID',@src_SubObjValue)
+                    SET @cb_display_name = Concat(@pos_in_email_cb,'. ',@cb_name,IIF(NOT EMPTY(@friendly_cb_name),Concat(' | ',@friendly_cb_name),''))
+                  ENDIF 
+                ENDIF
+
+                SET @navigateToButton = Concat('Id:NavigateToButton//Value:',@src_Value,'//Displayed:1//Action:',@src_Action,'//SubObject:',@src_SubObject,'//Object:',@src_Object,'//Environment:',@src_Environment,'//brand_state:',IIF(@src_Brand_state == 'All brands',@userCurrentBrand,@src_Brand_state),'//SubObjValue:',@src_SubObjValue)
+
+                IF @src_Object == 'Email Editor' THEN
+                  SET @src_description = Lookup(@de_emailObject,'description','EmailName',@src_Value)
+                ELSE
+                  SET @src_description = ''
+                ENDIF
+
+              ]%%
+                <tr>
+                  <td class="spanRowData"><span class="no-overflow">%%=v(@tally)=%%.</span></td>
+                  <td class="spanRowData"><span class="no-overflow">%%=IIF(LENGTH(@src_Brand_state) > 30, Concat(Substring(@src_Brand_state,1,28),'..'),@src_Brand_state)=%%</span></td>
+                  <td class="spanRowData"><span class="no-overflow">%%=IIF(LENGTH(@src_Object) > 24, Concat(Substring(@src_Object,1,22),'..'),@src_Object)=%%</span></td>
+                  <td class="spanRowData"><span class="no-overflow">%%=v(@src_Value)=%% %%=IIF(LENGTH(@src_description) > 25, Concat('(',Substring(@src_description,1,25),'..',')'),IIF(EMPTY(@src_description),'',Concat('(',@src_description,')')))=%%</span></td>
+                  <td class="spanRowData"><span class="no-overflow">%%=IIF(LENGTH(@src_SubObject) > 24, Concat(Substring(@src_SubObject,1,22),'..'),@src_SubObject)=%% %%=IIF(NOT EMPTY(@cb_display_name) AND @src_SubObject == 'Content block settings',Concat('(',IIF(@src_SubObject == 'Content block settings',@cb_display_name,''),')'),'')=%%</span></td>
+                  <td class="spanRowData"><span class="no-overflow">%%=Format(@src_DateAdded,'dd/MM/yy hh:mm tt')=%%</span></td>
+                  <td style="padding-right: 15px;text-align: right!important" class="spanRowData">
+                  %%[ IF Lookup(@appCPermissionTable,'Access','EmailAddress',@emailAddress,'ParentApp',@parentApp,'Type',@src_Action) != true OR @src_Action != 'Delete' THEN ]%%
+                    <button class="continueEditingRow spanRowData" type="submit" name="FormName" value="%%=v(@navigateToButton)=%%" onclick="modal();">open</button>
+                  %%[ ENDIF ]%%
+                  </td>
+                </tr>
+                <script type="text/javascript">
+                  $("#editAsset%%=v(@src_EventID)=%%").click(function() { $("#editOptionsShow%%=v(@src_EventID)=%%").show(); });
+                </script>
+              %%[ ENDIF ]%%
+            %%[ ENDIF ]%%
+          %%[ ENDIF ]%%
+        %%[ next @e ]%%
+        </table>
+      </form>
+    </div>
+    
+      <div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
+        <h5 class="explainerthree" style="margin-bottom:0">Scheduled sends</h5>
+      </div>
+      <div id="tooltip-home-page">
+      </div>
+      <script runat="server">
+        Platform.Load("Core","1");
+        var de_p_obj = Variable.GetValue("@de_p_obj");
+        var appStateEnvironment = Variable.GetValue("@appStateEnvironment");
+        var userCurrentBrand = Variable.GetValue("@userCurrentBrand");
+        var de_appC_send_log = Variable.GetValue("@de_appC_send_log");
+        var api = new Script.Util.WSProxy();
+        var category_id = appStateEnvironment == "UAT" ? 881087 : 881088;
+                  
+        var out = [];
+        moreData = true;
+        reqID = data = null;
+
+        var cols = [
+          "Name",
+          "Description",
+          "CreatedDate",
+          "Status",
+          "CategoryID",
+          "LastRunTime",
+          "ScheduledTime",
+          "LastSaveDate",
+          "AutomationType"
+        ];
+
+        var filter = {
+          Property:"CategoryID",
+          SimpleOperator:"equals",
+          Value: category_id
+        };
+
+        function retrieveAutomationStatusName(num) {
+          switch(num) {
+            case -1:
+              status = 'Error';
+            break;
+            case 0:
+              status = 'BuildingError';
+            break;
+            case 1:
+              status = 'Building';
+            break;
+            case 2:
+              status = 'Ready';
+            break;
+            case 3:
+              status = 'Running';
+            break;
+            case 4:
+              status = 'Paused';
+            break;
+            case 5:
+              status = 'Stopped';
+            break;
+            case 6:
+              status = 'Scheduled';
+            break;
+            case 7:
+              status = 'Awaiting Trigger';
+            break;
+            case 8:
+              status = 'Inactive Trigger';
+            break;
+          }
+          return status;
+        }
+
+        function convertToAEDT(inputString) {
+            var inputFormat = 'MM/DD/YYYY h:mm:ss A';
+            var parsedDate = new Date(inputString);
+            var formattedDate = parsedDate.toLocaleString('en-AU', {
+                year: '2-digit',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+                timeZone: 'Australia/Sydney'
+            });
+          return convertToCustomFormat(formattedDate);
+        }
+
+        function convertToCustomFormat(inputString) {
+            var inputFormat = 'dddd, MMMM D, YYYY h:mm:ss A';
+            var parsedDate = new Date(inputString);
+            var time = inputString.split(' ')[4];
+            var ampmValue = inputString.split(' ')[5];
+            var timeHr = time.split(':')[0];
+            if(timeHr === '8' && ampmValue === 'AM') {
+              var parsedDate =  new Date(inputString);
+              parsedDate.setHours(parsedDate.getHours() - 13);
+            }
+            
+            var day = ('0' + parsedDate.getDate()).slice(-2);
+            var month = ('0' + (parsedDate.getMonth() + 1)).slice(-2);
+            var year = parsedDate.getFullYear().toString();
+            var hours = parsedDate.getHours() % 12 || 12;
+            var minutes = ('0' + parsedDate.getMinutes()).slice(-2);
+            var ampm = parsedDate.getHours() < 12 ? 'AM' : 'PM';
+            var formattedDate = day + '/' + month + '/' + year + ' ' + hours + ':' + minutes + ' ' + ampm;
+            return formattedDate;
+        }
+
+        function isColumnToOmit(key) {
+          for (var i = 0; i < columnsToOmit.length; i++) {
+            if (columnsToOmit[i] === key) {
+              return true;
+            }
+          }
+          return false;
+        }
+                     
+        while (moreData) {
+          moreData = false;
+          if (reqID == null) {
+            data = api.retrieve("Automation", cols, filter);
+          } else {
+            data = api.getNextBatch("Automation", reqID);
+          };
+
+          if (data != null) {
+            moreData = data.HasMoreRows;
+            reqID = data.RequestID;
+            for (var i = 0; i < data.Results.length; i++) {
+              out.push(data.Results[i]);
+            }
+          };
+        }
+
+        var columnsToOmit = ["Schedule", "AutomationTasks", "AutomationSource", "Notifications", "LastRunInstanceID", "CreatedBy", "CategoryID","InteractionObjectID","ModifiedBy","LastSavedBy","InteractionObjectID","Description","Keyword","Client","PartnerKey","PartnerProperties","ID","ObjectID","Owner","CorrelationID","ObjectState","IsPlatformObject","RecurrenceID","UpdateModified","CustomerKey","IsActive","ModifiedDate","CreatedDate","AutomationType"];
+        var htmlTable = '';
+        var htmlTable_tds = '';
+        var htmlTable_trs = '';
+        var htmlTableHeaders = '';
+
+        for (var key in out[0]) {
+          if (!isColumnToOmit(key)) { 
+            htmlTableHeaders += '<td>' + key + '</td>';
+          }
+        }
+        var style2 = 'width:6px!important;padding-left:0;';
+        htmlTableHeaders += '<td style='+style2+'></td>';
+
+        function sortByScheduledTime(data, order) {
+          return data.sort(function(a, b) {
+              var timeA = new Date(a.ScheduledTime);
+              var timeB = new Date(b.ScheduledTime);
+
+              if (order === 'desc') {
+                  return timeB - timeA;
+              }
+              return timeA - timeB;
+          });
+        }
+
+        var sortOrder = 'desc'; 
+        out = sortByScheduledTime(out, sortOrder);
+        var tdClass = 'spanRowData';
+        var tdClass2 = 'assetCard';
+        var cardheader = 'card-header';
+        var assetcontainer = 'assetRowContainer';
+        var style = 'padding:0px;';
+        var mb0 = 'mb-0';
+          for (var i = 0; i < out.length; i++) {
+            var tally = 0;
+            for (var key in out[i]) {
+              var tally = tally + 1;
+              if (!isColumnToOmit(key)) {
+                var show_block = ''; 
+                var kk = out[i][key];
+                if (tally == 5) { 
+                  var kk = retrieveAutomationStatusName(kk);
+                  var kk2 = retrieveAutomationStatusName(kk);
+                  var k_loop = 'start';
+                };
+                if (tally == 7) {
+                  var kk = convertToAEDT(Platform.Function.SystemDateToLocalDate(kk));
+                 };
+                if (tally == 13) { 
+                  var kk = convertToAEDT(Platform.Function.SystemDateToLocalDate(kk)); 
+                  var splitedDate = kk.split(' ');
+                  splitedDate[0] === '01/01/1' ? kk = '--' : kk;
+                };
+                if (tally == 14) { 
+                  var kk = convertToAEDT(Platform.Function.SystemDateToLocalDate(kk));
+                };
+                if (tally == 25) { 
+                  var kk = convertToAEDT(Platform.Function.SystemDateToLocalDate(kk));
+                };
+                if (tally == 26) { 
+                  var kk = convertToAEDT(Platform.Function.SystemDateToLocalDate(kk));
+                };
+                if (tally == 19) { 
+                  var kk = kk.replace("_auto","");
+                  if (Platform.Function.LookupRows(de_p_obj,'program_name',kk).length > 0) {
+                    var e_brand = Platform.Function.Lookup(de_p_obj,'created_in_brand','program_name',kk);
+                    if(e_brand != userCurrentBrand) { 
+                      var show_block = false;
+                      var htmlTable_tds = '';
+                    } else {
+                      var show_block = true;
+                    };
+                  } else {
+                      var show_block = false;
+                      var htmlTable_tds = '';
+                  };
+                  var k_loop = 'end';
+                };
+                if ((tally == 5 || tally == 7 || tally == 13 || tally == 14 || tally == 19) && kk2 == 'Scheduled') {
+                  htmlTable_tds += '<td class=' + tdClass + '>' + (kk === null ? '' : kk) + '</td>';
+                };
+                if (show_block == false) {
+                  var htmlTable_tds = '';
+                };       
+              };
+              if (k_loop == 'end' && htmlTable_tds) {
+                htmlTable_trs += '<tr>' + htmlTable_tds + '</tr>';
+                var k_loop = 'end';
+                var htmlTable_tds = '';
+                var kk2 = '';
+                var show_block = '';
+              };
+            }
+          }   
+        if (!htmlTable_trs) {
+          var htmlTable = '<table class="home-grid no-rows-home-grid" id="scheduledSendTableBody"><tr class="no-data-row"><td>There are no sends scheduled for this brand.</td></tr></table>';
+        } else if(htmlTable_trs) {
+           htmlTable += '<table class="home-grid" id="scheduledSendTableBody" style="width:100%">' + htmlTable_trs + '</table>';
+        };
+      </script>
+      <div class="assetCard">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <div class="assetRowContainer" style="padding:0px;">
+              <table id="scheduledSendTableHeader">
+                <tr>
+                  <script runat=server>Write(htmlTableHeaders);</script>
+                </tr>
+              </table>
+            </div>
+          </h5>
+        </div>
+      </div>
+      <div class="list_view_table_row_container" id="scheduled_sends_tab" style="height:10%;margin-bottom:5px!important;">
+        <form action="" accept-charset="UTF-8" method="post" aria-labelledby="FilterAsset2" id="FilterAsset2">
+          <script runat=server>Write(htmlTable);</script>
+        </form>
+      </div>
+    
+    <div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
+      <h5 class="explainerthree" style="margin-bottom:0;">Sends in the last 7 days</h5>
+    </div>
+    <div class="assetCard">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <div class="assetRowContainer" style="padding:0px;">
+            <table id="sendInTableHeader">
+              <tr>
+                <td onclick="sortHomeTable(0, 'sendInTableBody')" class="clickable asc">Send date</td>
+                <td onclick="sortHomeTable(1, 'sendInTableBody')" class="clickable asc">Message name</td>
+                %%[ IF @Role == 'Admin' THEN ]%%
+                  <td id="adminColumn01" onclick="sortHomeTable(2, 'sendInTableBody')" class="clickable asc">Program name</td>
+                  <td id="adminColumn02" onclick="sortHomeTable(3, 'sendInTableBody')" class="clickable asc">Program type</td>
+                  <td id="adminColumn03" onclick="sortHomeTable(4, 'sendInTableBody')" class="clickable asc">Sent from</td>
+                %%[ ENDIF ]%%
+                <td onclick="sortHomeTable(isAdmin ? 5 : 2, 'sendInTableBody')" class="clickable asc">Sent or scheduled by</td>
+                <td onclick="sortHomeTable(isAdmin ? 6 : 3, 'sendInTableBody')" class="clickable asc">Subject</td>
+                <td onclick="sortHomeTable(isAdmin ? 7 : 4 , 'sendInTableBody')" class="clickable asc">Preheader</td>
+                <td onclick="sortHomeTable(isAdmin ? 8 : 5, 'sendInTableBody')" style="width:6px!important;padding-left:0;"></td>
+              </tr>
+            </table>
+          </div>
+        </h5>
+      </div>
+    
+
+<div class="list_view_table_row_container" style="height:40%;margin-bottom:5px!important;max-height:450px;">
+   <form action="" accept-charset="UTF-8" method="post" aria-labelledby="FilterAsset3" id="FilterAsset3">
+     <table id="sendInTableBody" class="home-grid">
+       <tr class="veryfirstrow">
+            <td class="emptyCell"></td>
+            <td class="emptyCell"></td> 
+          %%[ IF @Role == 'Admin' THEN ]%%
+              <td class="emptyCell"></td> 
+              <td class="emptyCell"></td> 
+              <td class="emptyCell"></td> 
+          %%[ ENDIF ]%%
+          <td class="emptyCell"></td> 
+          <td class="emptyCell"></td>
+          <td class="emptyCell"></td>  
+        </tr>
+                %%[
+                SET @de_appC_send_log = IIF(@AppStateEnvironment == 'UAT','ent.appC_send_log_UAT','ent.appC_send_log')
+                SET @tally = 0
+                SET @string = ""
+                SET @de_appC_send_log_rc = RowCount(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand))
+                for @e = 1 to @de_appC_send_log_rc do
+                    SET @de_sl_send_id = Field(Row(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand),@e),'send_id')
+                    SET @appC_send_log_fields = "message_name,send_date,subject,preheader,sent_from,sent_or_scheduled_by,program_type,program_name"
+                    for @var = 1 to RowCount(BuildRowSetFromString(@appC_send_log_fields,",")) do
+                        SET @deField = Field(Row(BuildRowSetFromString(@appC_send_log_fields,","),@var),1)
+                        IF @deField != "subject" AND @deField != "preheader" THEN
+                            TreatAsContent(CONCAT('%','%[ SET @de_sl_',@deField,' = "',Lookup(@de_appC_send_log,@deField,'send_id',@de_sl_send_id),'" ]%','%'))
+                        ENDIF
+                    next @var
+                    IF @de_sl_send_date > DateAdd(@localTime,'-7','D') THEN ]%%
+                    <tr>
+                        <td class="spanRowData"><span class="no-overflow">%%=Format(@de_sl_send_date,'dd/MM/yy hh:mm tt')=%%</span></td>
+                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_message_name)=%%</span></td>
+                        %%[ IF @Role == 'Admin' THEN ]%%
+                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_name)=%%</span></td>
+                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_type)=%%</span></td>
+                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_from)=%%</span></td>
+                        %%[ ENDIF ]%%
+                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_or_scheduled_by)=%%</span></td>
+                        <td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Subject','send_id',@de_sl_send_id)=%%</span></td>
+                        <td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Preheader','send_id',@de_sl_send_id)=%%</span></td>
+                    </tr>
+                %%[ ENDIF ]%%
+            %%[ next @e ]%%
+        </table>
+    </form>
+</div>
+
