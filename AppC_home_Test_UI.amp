@@ -12,7 +12,7 @@ ENDIF
 SET @AppC_Notifications_Object = "Value,Object,SubObject,SubObjValue,Environment,Username,brand_state,Action,DateAdded"
 SET @de_p_obj = IIF(@AppStateEnvironment == 'UAT','ent.programs_obj_uat','ent.programs_obj')
 ]%%
-<div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
+    <div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
       <h5 class="explainerthree" style="margin-top:-15px!important;margin-bottom:0;" title-grid-box-style">Your recent activities</h5>
       <form action="javascript:void(0);" accept-charset="UTF-8" class="form-inline">
         <input class="form-control mr-sm-2 inputsearchbutton" type="search" autocomplete="off" placeholder="Search for any keyword in the below tables..." aria-label="Search" style="position: fixed;top: 47px!important;z-index: 1200;height:21px;" id="assetsInputSearch">
@@ -411,47 +411,46 @@ SET @de_p_obj = IIF(@AppStateEnvironment == 'UAT','ent.programs_obj_uat','ent.pr
    <form action="" accept-charset="UTF-8" method="post" aria-labelledby="FilterAsset3" id="FilterAsset3">
      <table id="sendInTableBody" class="home-grid">
        <tr class="veryfirstrow">
-            <td class="emptyCell"></td>
-            <td class="emptyCell"></td> 
+         	<td class="emptyCell"></td>
+        	<td class="emptyCell"></td> 
           %%[ IF @Role == 'Admin' THEN ]%%
-              <td class="emptyCell"></td> 
-              <td class="emptyCell"></td> 
-              <td class="emptyCell"></td> 
+	          <td class="emptyCell"></td> 
+	          <td class="emptyCell"></td> 
+	          <td class="emptyCell"></td> 
           %%[ ENDIF ]%%
           <td class="emptyCell"></td> 
           <td class="emptyCell"></td>
           <td class="emptyCell"></td>  
         </tr>
-                %%[
-                SET @de_appC_send_log = IIF(@AppStateEnvironment == 'UAT','ent.appC_send_log_UAT','ent.appC_send_log')
-                SET @tally = 0
-                SET @string = ""
-                SET @de_appC_send_log_rc = RowCount(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand))
-                for @e = 1 to @de_appC_send_log_rc do
-                    SET @de_sl_send_id = Field(Row(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand),@e),'send_id')
-                    SET @appC_send_log_fields = "message_name,send_date,subject,preheader,sent_from,sent_or_scheduled_by,program_type,program_name"
-                    for @var = 1 to RowCount(BuildRowSetFromString(@appC_send_log_fields,",")) do
-                        SET @deField = Field(Row(BuildRowSetFromString(@appC_send_log_fields,","),@var),1)
-                        IF @deField != "subject" AND @deField != "preheader" THEN
-                            TreatAsContent(CONCAT('%','%[ SET @de_sl_',@deField,' = "',Lookup(@de_appC_send_log,@deField,'send_id',@de_sl_send_id),'" ]%','%'))
-                        ENDIF
-                    next @var
-                    IF @de_sl_send_date > DateAdd(@localTime,'-7','D') THEN ]%%
-                    <tr>
-                        <td class="spanRowData"><span class="no-overflow">%%=Format(@de_sl_send_date,'dd/MM/yy hh:mm tt')=%%</span></td>
-                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_message_name)=%%</span></td>
-                        %%[ IF @Role == 'Admin' THEN ]%%
-                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_name)=%%</span></td>
-                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_type)=%%</span></td>
-                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_from)=%%</span></td>
-                        %%[ ENDIF ]%%
-                        <td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_or_scheduled_by)=%%</span></td>
-                        <td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Subject','send_id',@de_sl_send_id)=%%</span></td>
-                        <td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Preheader','send_id',@de_sl_send_id)=%%</span></td>
-                    </tr>
-                %%[ ENDIF ]%%
-            %%[ next @e ]%%
-        </table>
-    </form>
+				%%[
+				SET @de_appC_send_log = IIF(@AppStateEnvironment == 'UAT','ent.appC_send_log_UAT','ent.appC_send_log')
+				SET @tally = 0
+				SET @string = ""
+				SET @de_appC_send_log_rc = RowCount(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand))
+				for @e = 1 to @de_appC_send_log_rc do
+					SET @de_sl_send_id = Field(Row(LookupOrderedRows(@de_appC_send_log,0,'send_date DESC','created_in_brand',@userCurrentBrand),@e),'send_id')
+					SET @appC_send_log_fields = "message_name,send_date,subject,preheader,sent_from,sent_or_scheduled_by,program_type,program_name"
+					for @var = 1 to RowCount(BuildRowSetFromString(@appC_send_log_fields,",")) do
+						SET @deField = Field(Row(BuildRowSetFromString(@appC_send_log_fields,","),@var),1)
+						IF @deField != "subject" AND @deField != "preheader" THEN
+							TreatAsContent(CONCAT('%','%[ SET @de_sl_',@deField,' = "',Lookup(@de_appC_send_log,@deField,'send_id',@de_sl_send_id),'" ]%','%'))
+						ENDIF
+					next @var
+					IF @de_sl_send_date > DateAdd(@localTime,'-7','D') THEN ]%%
+					<tr>
+						<td class="spanRowData"><span class="no-overflow">%%=Format(@de_sl_send_date,'dd/MM/yy hh:mm tt')=%%</span></td>
+						<td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_message_name)=%%</span></td>
+						%%[ IF @Role == 'Admin' THEN ]%%
+						<td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_name)=%%</span></td>
+						<td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_program_type)=%%</span></td>
+						<td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_from)=%%</span></td>
+						%%[ ENDIF ]%%
+						<td class="spanRowData"><span class="no-overflow">%%=v(@de_sl_sent_or_scheduled_by)=%%</span></td>
+						<td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Subject','send_id',@de_sl_send_id)=%%</span></td>
+						<td class="spanRowData"><span class="no-overflow">%%=Lookup(@de_appC_send_log,'Preheader','send_id',@de_sl_send_id)=%%</span></td>
+					</tr>
+				%%[ ENDIF ]%%
+			%%[ next @e ]%%
+		</table>
+	</form>
 </div>
-
