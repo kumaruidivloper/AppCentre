@@ -1,6 +1,6 @@
 %%[
 SET @brand = 'News Corp Australiaaa'
-Output(concat('Hello', 'SFMCCC'))
+Output(concat('Hello', 'SFMCCCfdfdsfdsfdsf'))
 ]%%
 %%[IF @brand == 'News Corp Australia' THEN]%%
 <div>NCA</div>
