@@ -796,7 +796,6 @@ var role = Variable.GetValue("@role");
      </style>
    </head>
    <body>
-    <div>Root App From GitRepo</div>
       %%[ IF @access == 1 AND @layer != 'LOGOUT' THEN ]%%
         <!-- START APP CENTRE NAV -->
         <div class="appC_name">  
