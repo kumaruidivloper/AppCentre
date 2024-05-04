@@ -1074,7 +1074,7 @@ var role = Variable.GetValue("@role");
             $("#FilterBrandShow").show(); 
             setTimeout(() => {
                  console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 console.log(document.querySelectorAll('#document'))[0])
+                 console.log(document.querySelectorAll('#document')[0])
             }, 3000)
                
         });
