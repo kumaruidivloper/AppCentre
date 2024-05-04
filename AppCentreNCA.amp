@@ -783,9 +783,6 @@ var role = Variable.GetValue("@role");
               $("#emailPreviewIframe").css("display","block");
             %%[ ENDIF ]%%
           };
-          //if(document.getElementById('#FilterBrandShow') !== null) {
-             console.log(document.getElementById('#FilterBrandShow'))
-          //}
         }
 
         </script>
@@ -1073,7 +1070,10 @@ var role = Variable.GetValue("@role");
         }
 
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
-        $("#FilterBrand").click(function() { $("#FilterBrandShow").show(); });
+        $("#FilterBrand").click(function() { $(
+            "#FilterBrandShow").show(); 
+            console.log(document.getElementById('#FilterBrandShow'))
+        });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
