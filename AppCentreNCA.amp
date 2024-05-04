@@ -783,7 +783,7 @@ var role = Variable.GetValue("@role");
               $("#emailPreviewIframe").css("display","block");
             %%[ ENDIF ]%%
           };
-          alert('hello')
+          console.log('Brand clicked')
         }
 
         </script>
