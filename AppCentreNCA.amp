@@ -783,9 +783,9 @@ var role = Variable.GetValue("@role");
               $("#emailPreviewIframe").css("display","block");
             %%[ ENDIF ]%%
           };
-          if(document.getElementById('#FilterBrandShow') !== null) {
-             console.log('brand fdfdfds')
-          }
+          //if(document.getElementById('#FilterBrandShow') !== null) {
+             console.log(document.getElementById('#FilterBrandShow'))
+          //}
         }
 
         </script>
