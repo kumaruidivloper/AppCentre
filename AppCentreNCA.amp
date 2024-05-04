@@ -1070,9 +1070,14 @@ var role = Variable.GetValue("@role");
         }
 
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
-        $("#FilterBrand").click(function() { $(
-            "#FilterBrandShow").show(); 
-            console.log(document.getElementById('#FilterBrandShow'))
+        $("#FilterBrand").click(function() { 
+            $("#FilterBrandShow").show(); 
+            if(document.getElementById('#FilterBrandShow') !== null) {
+                console.log(document.getElementById('#FilterBrandShow'));
+            } else {
+                console.log(document.getElementById('#FilterBrandShow'));
+            }
+            
         });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
