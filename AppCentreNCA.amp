@@ -1076,7 +1076,6 @@ var role = Variable.GetValue("@role");
                 console.log(document.getElementById('#FilterBrandShow'));
             }, 5000)
                 
-            }
             
         });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
