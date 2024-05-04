@@ -1697,6 +1697,10 @@ var role = Variable.GetValue("@role");
           gridHeaderArrorwToggle('#sendInTableHeader tr td.clickable');
           disableColumnSort();
 
+          function brandSearch () {
+            alert('brand search')
+          }
+
           function gridInjectHandlers() {
             let eventCount = -1;
             let targetTabelName = 'scheduledSendTableBody';
