@@ -1074,7 +1074,9 @@ var role = Variable.GetValue("@role");
             $("#FilterBrandShow").show(); 
             setTimeout(() => {
                  console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 console.log(document.querySelectorAll('#brandsInputSearch')[0])
+                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth + 'px'
+                 document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
+                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width;
             }, 3000)
                
         });
