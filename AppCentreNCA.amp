@@ -1072,7 +1072,6 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
             if(document.querySelectorAll('#FilterBrandShow')[0].clientHeight > 250) {
                 console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
             }
