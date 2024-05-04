@@ -1072,7 +1072,10 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { $("#FilterBrandShow").show(); });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
-        $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
+        $(document).ready(function() {$("#User").click(function() {
+            $("#UserShow").toggle();
+            alert('Hello')
+        });});
 
         async function add_or_edit_cb_api(action_area,src_secret,id,type,posInEmail,event) {
             event.preventDefault();
