@@ -1072,7 +1072,7 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            if(document.getElementById('#FilterBrandShow') !== null) {
+            if(document.getElementById('#FilterBrandShow') != null || document.getElementById('#FilterBrandShow') != undefined) {
                 console.log(document.getElementById('#FilterBrandShow'));
             } else {
                 console.log(document.body.contains('#FilterBrandShow'));
