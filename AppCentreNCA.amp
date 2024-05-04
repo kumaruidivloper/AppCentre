@@ -783,6 +783,7 @@ var role = Variable.GetValue("@role");
               $("#emailPreviewIframe").css("display","block");
             %%[ ENDIF ]%%
           };
+          alert('hello')
         }
 
         </script>
@@ -1022,7 +1023,6 @@ var role = Variable.GetValue("@role");
         $('.dropdown-item.toggleSortByFields').click(function() { modal(); });
 
         function filterFunction() {
-          alert('Hello')  
           var input, filter, ul, li, a, i;
           input = document.getElementById("brandsInputSearch");
           filter = input.value.toUpperCase();
