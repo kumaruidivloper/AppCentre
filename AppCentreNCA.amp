@@ -1702,6 +1702,7 @@ var role = Variable.GetValue("@role");
           }
 
           function gridInjectHandlers() {
+            alert('Hello')
             let eventCount = -1;
             let targetTabelName = 'scheduledSendTableBody';
             const headerRow = scheduledSendGridHeader.rows;
