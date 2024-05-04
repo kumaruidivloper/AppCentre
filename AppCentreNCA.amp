@@ -1072,11 +1072,10 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            if(document.querySelectorAll('#FilterBrandShow')[0].clientHeight > 250) {
-                console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-            }
-                
-            
+            setTimeout(() => {
+                 console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
+            }, 3000)
+               
         });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
