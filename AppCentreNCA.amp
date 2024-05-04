@@ -1072,10 +1072,10 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            if(document.getElementById('#FilterBrandShow') != null || document.getElementById('#FilterBrandShow') != undefined) {
+            setTimeout(() => {
                 console.log(document.getElementById('#FilterBrandShow'));
-            } else {
-                console.log(document.getElementById('#FilterBrandShow'));
+            }, 5000)
+                
             }
             
         });
