@@ -1075,7 +1075,7 @@ var role = Variable.GetValue("@role");
             if(document.getElementById('#FilterBrandShow') != null || document.getElementById('#FilterBrandShow') != undefined) {
                 console.log(document.getElementById('#FilterBrandShow'));
             } else {
-                console.log(document.body.contains('#FilterBrandShow'));
+                console.log(document.getElementById('#FilterBrandShow'));
             }
             
         });
