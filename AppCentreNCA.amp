@@ -1088,7 +1088,7 @@ var role = Variable.GetValue("@role");
                 const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
                 const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
                 const childElement = parentElement.childNodes[3];
-                childElement.style.paddingTop = '20px'
+                childElement.style.paddingTop = '50px'
                 document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
                 document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';
                 
