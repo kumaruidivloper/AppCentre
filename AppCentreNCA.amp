@@ -1075,9 +1075,9 @@ var role = Variable.GetValue("@role");
             setTimeout(() => {
                  console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
                  document.querySelectorAll('#FilterBrandForm')[0].style.padding = '42px 0px 0px 0px'
-                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth + 'px'
+                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
                  document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 4;
+                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 4 + 'px';
             }, 3000)
                
         });
