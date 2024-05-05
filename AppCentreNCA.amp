@@ -1035,11 +1035,25 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
-          console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
-                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
-                 document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';
+          filterSearchInputPostion('brand');
+        }
+
+        function filterSearchInputPostion (value) {
+         if(value === 'brand') {
+            console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
+            document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
+            const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
+            document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
+            document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
+         } else {
+            console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
+            const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
+            const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
+            const childElement = parentElement.childNodes[3];
+            childElement.style.paddingTop = '50px'
+            document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
+            document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';   
+         }
         }
 
         function filterFunctionEmails() {
@@ -1056,14 +1070,7 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
-
-          console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
-                const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
-                const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
-                const childElement = parentElement.childNodes[3];
-                childElement.style.paddingTop = '50px'
-                document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
-                document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';   
+          filterSearchInputPostion('email');
         }
 
         function filterFunctionCBs() {
