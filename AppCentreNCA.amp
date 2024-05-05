@@ -1074,7 +1074,7 @@ var role = Variable.GetValue("@role");
             $("#FilterBrandShow").show(); 
             setTimeout(() => {
                  console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 document.querySelectorAll('#FilterBrandShow')[0].style.padding = '42px !important 0 !important 0 !important 0 !important'
+                 document.querySelectorAll('#FilterBrandShow')[0].style.padding = '42px 0 0 0'
                  const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth + 'px'
                  document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
                  document.querySelectorAll('#brandsInputSearch')[0].style.width = width;
