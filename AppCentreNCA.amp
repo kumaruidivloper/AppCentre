@@ -1078,7 +1078,7 @@ var role = Variable.GetValue("@role");
                  const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth + 'px'
                  document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
                  document.querySelectorAll('#brandsInputSearch')[0].style.width = width;
-            }, 3000)
+            }, 10000)
                
         });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
