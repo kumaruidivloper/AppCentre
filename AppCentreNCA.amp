@@ -1081,7 +1081,12 @@ var role = Variable.GetValue("@role");
             }, 3000)
                
         });
-        $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
+        $("#FilterEmail").click(function() { 
+            $("#FilterEmailShow").show(); 
+            setTimeout(() => {
+                console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
+            },3000);
+        });
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
         async function add_or_edit_cb_api(action_area,src_secret,id,type,posInEmail,event) {
