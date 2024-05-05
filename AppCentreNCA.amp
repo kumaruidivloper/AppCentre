@@ -1035,25 +1035,7 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
-          filterSearchInputPostion('brand');
-        }
-
-        function filterSearchInputPostion (value) {
-         if(value === 'brand') {
-            console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-            document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
-            const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
-            document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-            document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
-         } else {
-            console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
-            const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
-            const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
-            const childElement = parentElement.childNodes[3];
-            childElement.style.paddingTop = '50px'
-            document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
-            document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';   
-         }
+          filterSearchInputPostion('brand', 0);
         }
 
         function filterFunctionEmails() {
@@ -1070,7 +1052,10 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
-          filterSearchInputPostion('email');
+          setTimeout(() => {
+
+          },3000)
+          filterSearchInputPostion('email', 0);
         }
 
         function filterFunctionCBs() {
@@ -1092,27 +1077,32 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            setTimeout(() => {
-                 console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
-                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
-                 document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';
-            }, 3000)
-               
+            filterSearchInputPostion('brand', 3000);  
         });
         $("#FilterEmail").click(function() { 
             $("#FilterEmailShow").show(); 
-            setTimeout(() => {
-                console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
-                const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
-                const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
-                const childElement = parentElement.childNodes[3];
-                childElement.style.paddingTop = '50px'
-                document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
-                document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';         
-            },5000);
+            filterSearchInputPostion('email', 5000);
         });
+
+         function filterSearchInputPostion (value, delay) {
+            setTimeout(() => {
+                if(value === 'brand') {
+                    console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
+                    document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
+                    const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
+                    document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
+                    document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
+                } else {
+                    console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
+                    const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
+                    const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
+                    const childElement = parentElement.childNodes[3];
+                    childElement.style.paddingTop = '50px'
+                    document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
+                    document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px';   
+                }
+            }, delay)
+        }
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
         async function add_or_edit_cb_api(action_area,src_secret,id,type,posInEmail,event) {
