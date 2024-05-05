@@ -1074,11 +1074,11 @@ var role = Variable.GetValue("@role");
             $("#FilterBrandShow").show(); 
             setTimeout(() => {
                  console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                 document.querySelectorAll('#FilterBrandShow')[0].style.padding = '42px 0px 0px 0px'
+                 document.querySelectorAll('#FilterBrandForm')[0].style.padding = '42px 0px 0px 0px'
                  const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth + 'px'
                  document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
                  document.querySelectorAll('#brandsInputSearch')[0].style.width = width;
-            }, 10000)
+            }, 3000)
                
         });
         $("#FilterEmail").click(function() { $("#FilterEmailShow").show(); });
