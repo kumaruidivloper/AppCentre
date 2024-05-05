@@ -1035,6 +1035,11 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
+          console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
+                 document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
+                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
+                 document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
+                 document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';
         }
 
         function filterFunctionEmails() {
