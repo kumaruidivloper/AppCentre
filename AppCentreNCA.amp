@@ -1085,7 +1085,7 @@ var role = Variable.GetValue("@role");
             $("#FilterEmailShow").show(); 
             setTimeout(() => {
                 console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
-            },3000);
+            },5000);
         });
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
