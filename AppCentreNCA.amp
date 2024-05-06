@@ -916,7 +916,7 @@ var role = Variable.GetValue("@role");
           next @pp
         ENDIF
         IF @environmentAppCentre == 'UAT' THEN ]%%
-          <!-- %%=TreatAsContent(HTTPGET(@app_content))=%% -->
+          %%=TreatAsContent(HTTPGET(@app_content))=%%
         %%[ ELSEIF @environmentAppCentre == 'SIT' THEN ]%%
           %%=TreatAsContent(Lookup('ent.AppC_code_SIT','Code','Name',@App_content))=%%
         %%[ ELSE ]%%
