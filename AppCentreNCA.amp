@@ -1085,7 +1085,7 @@ var role = Variable.GetValue("@role");
         $("#FilterEmail").click(function() { 
             emailClicked++
             $("#FilterEmailShow").show(); 
-            filterSearchInputPostion('email', emailClicked > 1 ? 0: 6000);
+            filterSearchInputPostion('email', emailClicked > 1 ? 0 : 6000);
         });
 
          function filterSearchInputPostion (value, delay) {
