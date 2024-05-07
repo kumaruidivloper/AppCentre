@@ -766,7 +766,6 @@ var role = Variable.GetValue("@role");
           console.log('The component "' + component + '" was placed in id "' + target + '"');
           console.log('appC_ui_component('+component+','+target+','+tab+','+moreParams+','+showModal+','+spinningWheel+','+refreshIframe+','+idOneOff+','+disableButton+','+enableButton+')');
           %%[ ENDIF ]%%
-          console.log('target---------' + ' ' + target)
           filterSearchInputPostion(target);
           if (enableButton) { let button = '#'+enableButton; $(button).prop('disabled',false); $(button).css('background-color','#497edd'); $(button).html('Save'); }
            if (component == 'free_text_block') {
@@ -1054,9 +1053,6 @@ var role = Variable.GetValue("@role");
               a[i].style.display = "none";
             }
           }
-          setTimeout(() => {
-
-          },3000)
           filterSearchInputPostion('all_accessible_emails_rows');
         }
 
@@ -1079,29 +1075,27 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            //filterSearchInputPostion('brand', 4000);  
         });
         $("#FilterEmail").click(function() { 
             $("#FilterEmailShow").show(); 
-            //filterSearchInputPostion('email', 8000);
         });
 
          function filterSearchInputPostion (value) {
-                if(value === 'brand_rows') {
-                    console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
-                    const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
-                    document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
-                    document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-                    document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
-                } else {
-                    console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
-                    const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
-                    const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
-                    document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
-                    document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px'; 
-                    const childElement = parentElement.childNodes[3];
-                    childElement.style.paddingTop = '50px'  
-                }
+            if(value === 'brand_rows') {
+                console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
+                const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
+                document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
+                document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
+                document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
+            } else {
+                console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
+                const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
+                const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
+                document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
+                document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px'; 
+                const childElement = parentElement.childNodes[3];
+                childElement.style.paddingTop = '50px'  
+            }
         }
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
