@@ -825,7 +825,7 @@ var role = Variable.GetValue("@role");
         <div class="brand_tab">
           <div class="btn-group">
             <button type="button" class="dropdown-toggle nav_tab_button" id="FilterBrand" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" onclick="appC_ui_component('retrieve_brand_list_in_nav','brand_rows','','','0','0','0');">%%=IIF(LENGTH(@friendly_brandName) > 28,Concat(Substring(@friendly_brandName,1,25),'...'),@friendly_brandName)=%%</button>
-            <div class="dropdown-menu" aria-labelledby="FilterBrand" id="FilterBrandShow" style="display:none;top: 37px;">
+            <div class="dropdown-menu" aria-labelledby="FilterBrand" id="FilterBrandShow" style="display:none; top:37px;">
               <div id="brand_rows">
                 <div style="text-align:center;padding:20px;">
                   <div class="modall-dialog modal-sm" style="text-align:center;max-width:100%;">
