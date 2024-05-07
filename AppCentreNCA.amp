@@ -1080,7 +1080,7 @@ var role = Variable.GetValue("@role");
             $("#FilterEmailShow").show(); 
         });
 
-         function filterSearchInputPostion (inputType) {
+        function filterSearchInputPostion (inputType) {
             if(inputType === 'brand_rows') {
                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
                 %%[ IF @environmentAppCentre == 'UAT' THEN ]%%
