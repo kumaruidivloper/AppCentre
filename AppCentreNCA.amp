@@ -1075,13 +1075,17 @@ var role = Variable.GetValue("@role");
         }
 
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
+        let brandClicked = 0;
+        let emailClicked = 0;
         $("#FilterBrand").click(function() { 
+            brandClicked++;
             $("#FilterBrandShow").show(); 
-            filterSearchInputPostion('brand', 3000);  
+            filterSearchInputPostion('brand', brandClicked > 1 ? 0 : 3000);  
         });
         $("#FilterEmail").click(function() { 
+            emailClicked++
             $("#FilterEmailShow").show(); 
-            filterSearchInputPostion('email', 6000);
+            filterSearchInputPostion('email', emailClicked > 1 ? 0: 6000);
         });
 
          function filterSearchInputPostion (value, delay) {
