@@ -1096,7 +1096,7 @@ var role = Variable.GetValue("@role");
                 %%[ ENDIF ]%%
                 const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
                 document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
-                document.querySelectorAll('#emailInputSearch')[0].style.width = width === 0 ? 594 : width + 'px'; 
+                document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px'; 
                 const childElement = parentElement.childNodes[3];
                 childElement.style.paddingTop = '50px'; 
             }
