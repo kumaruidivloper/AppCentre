@@ -1081,7 +1081,7 @@ var role = Variable.GetValue("@role");
         });
         $("#FilterEmail").click(function() { 
             $("#FilterEmailShow").show(); 
-            filterSearchInputPostion('email', 8000);
+            filterSearchInputPostion('email', 4000);
         });
 
          function filterSearchInputPostion (value, delay) {
@@ -1098,8 +1098,11 @@ var role = Variable.GetValue("@role");
                     const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
                     document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
                     document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px'; 
-                    const childElement = parentElement.childNodes[3];
-                    childElement.style.paddingTop = '50px'  
+                    setTimeout(() => {
+                      const childElement = parentElement.childNodes[3];
+                      childElement.style.paddingTop = '50px' 
+                    }, 2000)
+                     
                 }
             }, delay)
         }
