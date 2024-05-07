@@ -1080,7 +1080,6 @@ var role = Variable.GetValue("@role");
             filterSearchInputPostion('brand', 3000);  
         });
         $("#FilterEmail").click(function() { 
-          console.log(component);
             $("#FilterEmailShow").show(); 
             filterSearchInputPostion('email', 6000);
         });
