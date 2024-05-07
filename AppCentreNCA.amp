@@ -1093,6 +1093,7 @@ var role = Variable.GetValue("@role");
                     document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
                     document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
                 } else {
+                    console.log(spinningWheel)
                     console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
                     const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
                     const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
