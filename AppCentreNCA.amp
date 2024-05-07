@@ -1080,23 +1080,28 @@ var role = Variable.GetValue("@role");
             $("#FilterEmailShow").show(); 
         });
 
-         function filterSearchInputPostion (value) {
+         function filterSearchInputPostion (value, event) {
             if(value === 'brand_rows') {
-                console.log(document.querySelectorAll('#FilterBrandShow')[0].clientWidth)
                 const width = document.querySelectorAll('#FilterBrandShow')[0].clientWidth
+                %%[ IF @environmentAppCentre == 'UAT' THEN ]%%
+                console.log('Brand Width' + ' ' + width)
+                %%[ ENDIF ]%%
                 document.querySelectorAll('#FilterBrandForm')[0].style.padding = '50px 0px 0px 0px'
                 document.querySelectorAll('#brandsInputSearch')[0].style.position = 'fixed';
-                document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px';  
+                document.querySelectorAll('#brandsInputSearch')[0].style.width = width - 2 + 'px'; 
             } else {
-                console.log(document.querySelectorAll('#FilterEmailShow')[0].clientWidth)
                 const width = document.querySelectorAll('#FilterEmailShow')[0].clientWidth
+                %%[ IF @environmentAppCentre == 'UAT' THEN ]%%
+                console.log('Email Width' + ' ' + width)
+                %%[ ENDIF ]%%
                 const parentElement = document.querySelectorAll('#all_accessible_emails_rows')[0]
                 document.querySelectorAll('#emailInputSearch')[0].style.position = 'fixed';
                 document.querySelectorAll('#emailInputSearch')[0].style.width = width + 'px'; 
                 const childElement = parentElement.childNodes[3];
-                childElement.style.paddingTop = '50px'  
+                childElement.style.paddingTop = '50px'; 
             }
         }
+
         $(document).ready(function() {$("#User").click(function() {$("#UserShow").toggle();});});
 
         async function add_or_edit_cb_api(action_area,src_secret,id,type,posInEmail,event) {
