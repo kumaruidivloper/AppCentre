@@ -766,6 +766,7 @@ var role = Variable.GetValue("@role");
           console.log('The component "' + component + '" was placed in id "' + target + '"');
           console.log('appC_ui_component('+component+','+target+','+tab+','+moreParams+','+showModal+','+spinningWheel+','+refreshIframe+','+idOneOff+','+disableButton+','+enableButton+')');
           %%[ ENDIF ]%%
+          console.log('target---------' + ' ' + target)
           if (enableButton) { let button = '#'+enableButton; $(button).prop('disabled',false); $(button).css('background-color','#497edd'); $(button).html('Save'); }
            if (component == 'free_text_block') {
               load_free_text_logic(tab);
