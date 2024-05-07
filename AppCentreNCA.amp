@@ -1077,11 +1077,11 @@ var role = Variable.GetValue("@role");
         $("#ToggleEnvironmentButton").change(function() { $("#ToggleEnvironmentForm").submit(); modal();});
         $("#FilterBrand").click(function() { 
             $("#FilterBrandShow").show(); 
-            filterSearchInputPostion('brand', 3000);  
+            filterSearchInputPostion('brand', 4000);  
         });
         $("#FilterEmail").click(function() { 
             $("#FilterEmailShow").show(); 
-            filterSearchInputPostion('email', 6000);
+            filterSearchInputPostion('email', 8000);
         });
 
          function filterSearchInputPostion (value, delay) {
