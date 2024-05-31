@@ -14,7 +14,7 @@ SET @de_p_obj = IIF(@AppStateEnvironment == 'UAT','ent.programs_obj_uat','ent.pr
 ]%%
 <!-- <div style="padding: 8px 0; font-weight: bold; background: red; color:#fff">The content of this page is served from a Git repository.</div> -->
     <div class="detailTableHeader1" style="padding-left:0px!important;padding-right:0px!important;border-bottom: 1px solid #dddcdc;">
-      <h5 class="explainerthree" style="margin-top:-15px!important;margin-bottom:0;" title-grid-box-style">Your recent activities</h5>
+      <h5 class="explainerthree" style="margin-top:-15px!important;margin-bottom:0;" title-grid-box-style">Your recent activitiesssss</h5>
       <form action="javascript:void(0);" accept-charset="UTF-8" class="form-inline">
         <input class="form-control mr-sm-2 inputsearchbutton" type="search" autocomplete="off" placeholder="Search for any keyword in the below tables..." aria-label="Search" style="position: fixed;top: 47px!important;z-index: 1200;height:21px;" id="assetsInputSearch">
       </form>
